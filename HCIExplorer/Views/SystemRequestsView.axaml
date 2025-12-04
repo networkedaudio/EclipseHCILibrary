@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="HCIExplorer.Views.SystemRequestsView"
+             x:DataType="vm:SystemRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="System Requests" Classes="header"/>
+            
+            <!-- Status Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Status Queries" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="System Status" Command="{Binding RequestSystemStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Frame Status" Command="{Binding RequestFrameStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Rack Configuration" Command="{Binding RequestRackConfigurationCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Role State" Command="{Binding RequestRoleStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="System Messages" Command="{Binding RequestSystemMessagesCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Actions Status" Command="{Binding RequestActionsStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- System Time -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="System Time" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <CalendarDatePicker SelectedDate="{Binding SystemTime}" 
+                                            Width="200"/>
+                        <Button Content="Set System Time" Command="{Binding SetSystemTimeCommand}" 
+                                Classes="primary"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

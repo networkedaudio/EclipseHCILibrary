@@ -1,0 +1,49 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HCIExplorer.App"
+             xmlns:local="using:HCIExplorer"
+             RequestedThemeVariant="Dark">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://HCIExplorer/Styles/ClearComTheme.axaml"/>
+    </Application.Styles>
+    
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Clear-Com Brand Colors -->
+            <Color x:Key="ClearComBlue">#0066B3</Color>
+            <Color x:Key="ClearComDarkBlue">#004A82</Color>
+            <Color x:Key="ClearComLightBlue">#3399CC</Color>
+            <Color x:Key="ClearComNavy">#1A2A3A</Color>
+            <Color x:Key="ClearComDarkGray">#2D3740</Color>
+            <Color x:Key="ClearComMediumGray">#404D58</Color>
+            <Color x:Key="ClearComLightGray">#A8B4BE</Color>
+            <Color x:Key="ClearComWhite">#FFFFFF</Color>
+            
+            <!-- Log Colors -->
+            <Color x:Key="RequestColor">#4FC3F7</Color>
+            <Color x:Key="ResponseColor">#81C784</Color>
+            <Color x:Key="DebugColor">#FFB74D</Color>
+            <Color x:Key="ErrorColor">#EF5350</Color>
+            
+            <!-- Brushes -->
+            <SolidColorBrush x:Key="ClearComBlueBrush" Color="{StaticResource ClearComBlue}"/>
+            <SolidColorBrush x:Key="ClearComDarkBlueBrush" Color="{StaticResource ClearComDarkBlue}"/>
+            <SolidColorBrush x:Key="ClearComNavyBrush" Color="{StaticResource ClearComNavy}"/>
+            <SolidColorBrush x:Key="ClearComDarkGrayBrush" Color="{StaticResource ClearComDarkGray}"/>
+            <SolidColorBrush x:Key="ClearComMediumGrayBrush" Color="{StaticResource ClearComMediumGray}"/>
+            <SolidColorBrush x:Key="ClearComLightGrayBrush" Color="{StaticResource ClearComLightGray}"/>
+            <SolidColorBrush x:Key="ClearComWhiteBrush" Color="{StaticResource ClearComWhite}"/>
+            
+            <SolidColorBrush x:Key="RequestBrush" Color="{StaticResource RequestColor}"/>
+            <SolidColorBrush x:Key="ResponseBrush" Color="{StaticResource ResponseColor}"/>
+            <SolidColorBrush x:Key="DebugBrush" Color="{StaticResource DebugColor}"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

@@ -18,4 +18,11 @@
     <None Remove="Tests\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="HCIExplorer\**" />
+    <Content Remove="HCIExplorer\**" />
+    <EmbeddedResource Remove="HCIExplorer\**" />
+    <None Remove="HCIExplorer\**" />
+  </ItemGroup>
+
 </Project>

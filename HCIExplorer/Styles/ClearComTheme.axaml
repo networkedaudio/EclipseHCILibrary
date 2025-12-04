@@ -1,0 +1,112 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- TabControl Styling -->
+    <Style Selector="TabControl">
+        <Setter Property="Background" Value="#1A2A3A"/>
+    </Style>
+    
+    <Style Selector="TabItem">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="Foreground" Value="#A8B4BE"/>
+    </Style>
+    
+    <Style Selector="TabItem:selected">
+        <Setter Property="Background" Value="#0066B3"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    
+    <Style Selector="TabItem:pointerover">
+        <Setter Property="Background" Value="#404D58"/>
+    </Style>
+    
+    <!-- Button Styling -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="#0066B3"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    
+    <Style Selector="Button.primary:pointerover">
+        <Setter Property="Background" Value="#004A82"/>
+    </Style>
+    
+    <Style Selector="Button.primary:pressed">
+        <Setter Property="Background" Value="#003366"/>
+    </Style>
+    
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+    
+    <Style Selector="Button.secondary:pointerover">
+        <Setter Property="Background" Value="#404D58"/>
+    </Style>
+    
+    <!-- TextBox Styling -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#404D58"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="#0066B3"/>
+    </Style>
+    
+    <!-- ComboBox Styling -->
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#404D58"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    
+    <!-- Label/TextBlock Styling -->
+    <Style Selector="TextBlock.header">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+    
+    <Style Selector="TextBlock.label">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="#A8B4BE"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    
+    <!-- Border/Panel Styling -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="4"/>
+    </Style>
+    
+    <!-- ScrollViewer Styling -->
+    <Style Selector="ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <!-- NumericUpDown Styling -->
+    <Style Selector="NumericUpDown">
+        <Setter Property="Background" Value="#2D3740"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#404D58"/>
+    </Style>
+    
+    <!-- CheckBox Styling -->
+    <Style Selector="CheckBox">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    
+</Styles>

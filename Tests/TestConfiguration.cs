@@ -8,7 +8,7 @@ public class TestConfiguration
     /// <summary>
     /// IP address of the EclipseHX matrix.
     /// </summary>
-    public string IpAddress { get; set; } = "192.168.1.100";
+    public string IpAddress { get; set; } = "192.168.1.106";
 
     /// <summary>
     /// Starting port number for connection attempts.

@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="HCIExplorer.Views.CardRequestsView"
+             x:DataType="vm:CardRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Card / Port Requests" Classes="header"/>
+            
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120,Auto,120" RowDefinitions="Auto">
+                        <TextBlock Text="Slot:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding Slot}" Minimum="1" Maximum="255"/>
+                        <TextBlock Grid.Column="2" Text="Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding Port}" Minimum="0" Maximum="255"/>
+                        <TextBlock Grid.Column="4" Text="Card ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="5" Value="{Binding CardId}" Minimum="1" Maximum="65535"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Card Info -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Card Information" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Card Info" Command="{Binding RequestCardInfoCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="All Cards" Command="{Binding RequestAllCardInfoCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Port Info" Command="{Binding RequestPortInfoCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Peripheral Info" Command="{Binding RequestPeripheralInfoCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="EHX Control Card" Command="{Binding RequestEhxControlCardStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Network & Redundancy -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Network &amp; Redundancy" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Network Redundancy Card" Command="{Binding RequestNetworkRedundancyCardStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Network Redundancy Endpoint" Command="{Binding RequestNetworkRedundancyEndpointStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="IPA Redundancy Switch" Command="{Binding RequestIpaCardRedundancySwitchCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- GPIO -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="GPIO" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="GPIO/SFO Status" Command="{Binding RequestGpioSfoStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

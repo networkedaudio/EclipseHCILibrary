@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="HCIExplorer.Views.BeltpackRequestsView"
+             x:DataType="vm:BeltpackRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Beltpack / Wireless Requests" Classes="header"/>
+            
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,*,Auto,120" RowDefinitions="Auto,Auto">
+                        <TextBlock Text="Beltpack ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding BeltpackId}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Label:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <TextBox Grid.Column="3" Text="{Binding BeltpackLabel}" Watermark="BP01"/>
+                        <TextBlock Grid.Column="4" Text="Serial:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="5" Value="{Binding SerialNumber}" Minimum="1" Maximum="4294967295"/>
+                        
+                        <TextBlock Grid.Row="1" Text="PMID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,8,8,0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Pmid}" Minimum="1" Maximum="4294967295" Margin="0,8,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Status Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Status Queries" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Beltpack Info" Command="{Binding RequestBeltpackInformationCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="All Beltpacks" Command="{Binding RequestAllBeltpacksCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Management -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Management" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Add Beltpack" Command="{Binding RequestBeltpackAddCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Delete Beltpack" Command="{Binding RequestBeltpackDeleteCommand}" 
+                                Classes="secondary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+             x:Class="HCIExplorer.Views.PanelRequestsView"
+             x:DataType="vm:PanelRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Panel Requests" Classes="header"/>
+            
+            <!-- Panel Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,100,Auto,100,Auto,100,Auto,100,Auto,100" RowDefinitions="Auto">
+                        <TextBlock Text="Slot:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding Slot}" Minimum="1" Maximum="255"/>
+                        <TextBlock Grid.Column="2" Text="Port Offset:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding PortOffset}" Minimum="0" Maximum="255"/>
+                        <TextBlock Grid.Column="4" Text="Panel Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="5" Value="{Binding PanelPort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="6" Text="Key:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="7" Value="{Binding KeyNumber}" Minimum="1" Maximum="255"/>
+                        <TextBlock Grid.Column="8" Text="Page:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="9" Value="{Binding PageNumber}" Minimum="1" Maximum="8"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Panel Status Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Panel Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Panel Status" Command="{Binding RequestPanelStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Panel Discovery" Command="{Binding RequestPanelDiscoveryCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="IP Panel List" Command="{Binding RequestIPPanelListCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Alt Text State" Command="{Binding RequestAltTextStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Audio Front-End State" Command="{Binding RequestGetPanelAudioFrontEndStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Key Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Key Operations" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Panel Keys Status" Command="{Binding RequestPanelKeysStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Assigned Keys" Command="{Binding RequestAssignedKeysCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Assigned Keys (w/ Labels)" Command="{Binding RequestAssignedKeysWithLabelsCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Locally Assigned Keys" Command="{Binding RequestLocallyAssignedKeysCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Key Public State" Command="{Binding RequestPanelKeysPublicGetStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Unlatch All Keys" Command="{Binding RequestPanelKeysUnlatchAllCommand}" 
+                                Classes="secondary" Margin="4"/>
+                        <Button Content="Macro Keys State" Command="{Binding RequestMacroPanelKeysPublicStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Page Control -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Page Control" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Set Page" Command="{Binding RequestShiftPageCommand}" 
+                                Classes="primary"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

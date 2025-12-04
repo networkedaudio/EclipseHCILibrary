@@ -1,0 +1,182 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HCIExplorer.ViewModels"
+        xmlns:views="using:HCIExplorer.Views"
+        xmlns:models="using:HCIExplorer.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="HCIExplorer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="HCI Explorer - Clear-Com Eclipse HX"
+        Width="1200" Height="800"
+        MinWidth="800" MinHeight="600"
+        Background="#1A2A3A">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto,250">
+        <!-- Header / Connection Bar -->
+        <Border Grid.Row="0" Background="#0066B3" Padding="16,12">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Logo/Title -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="HCI Explorer" 
+                               FontSize="20" FontWeight="Bold" 
+                               Foreground="White" 
+                               VerticalAlignment="Center"/>
+                    <Border Background="#004A82" CornerRadius="4" Padding="8,4">
+                        <TextBlock Text="Clear-Com Eclipse HX" 
+                                   FontSize="12" Foreground="#A8B4BE"/>
+                    </Border>
+                </StackPanel>
+                
+                <!-- Connection Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="Host:" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding HostAddress}" 
+                             Width="150" 
+                             Watermark="IP Address"
+                             VerticalAlignment="Center"/>
+                    <Button Content="{Binding ConnectButtonText}"
+                            Command="{Binding ConnectCommand}"
+                            Classes="secondary"
+                            Width="100"/>
+                    <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                        <Border.Styles>
+                            <Style Selector="Border">
+                                <Setter Property="Background" Value="#EF5350"/>
+                            </Style>
+                        </Border.Styles>
+                        <TextBlock Text="{Binding ConnectionStatus}" Foreground="White" FontSize="12"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Main Content - Tabbed Interface -->
+        <TabControl Grid.Row="1" Margin="0">
+            <TabItem Header="System">
+                <views:SystemRequestsView DataContext="{Binding SystemRequests}"/>
+            </TabItem>
+            <TabItem Header="Panels">
+                <views:PanelRequestsView DataContext="{Binding PanelRequests}"/>
+            </TabItem>
+            <TabItem Header="Crosspoints">
+                <views:CrosspointRequestsView DataContext="{Binding CrosspointRequests}"/>
+            </TabItem>
+            <TabItem Header="Conferences">
+                <views:ConferenceRequestsView DataContext="{Binding ConferenceRequests}"/>
+            </TabItem>
+            <TabItem Header="Telephony">
+                <views:TelephonyRequestsView DataContext="{Binding TelephonyRequests}"/>
+            </TabItem>
+            <TabItem Header="Cards">
+                <views:CardRequestsView DataContext="{Binding CardRequests}"/>
+            </TabItem>
+            <TabItem Header="Beltpacks">
+                <views:BeltpackRequestsView DataContext="{Binding BeltpackRequests}"/>
+            </TabItem>
+            <TabItem Header="Misc">
+                <views:MiscRequestsView DataContext="{Binding MiscRequests}"/>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Splitter -->
+        <GridSplitter Grid.Row="2" Height="6" Background="#2D3740" 
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                      ShowsPreview="True"/>
+        
+        <!-- Log Panel -->
+        <Border Grid.Row="3" Background="#1A2A3A" Padding="8">
+            <Grid RowDefinitions="Auto,*">
+                <!-- Filter Bar -->
+                <Border Grid.Row="0" Background="#2D3740" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <CheckBox Content="Requests" IsChecked="{Binding ShowRequests}" 
+                                      Foreground="#4FC3F7" FontWeight="SemiBold"/>
+                            <CheckBox Content="Responses" IsChecked="{Binding ShowResponses}" 
+                                      Foreground="#81C784" FontWeight="SemiBold"/>
+                            <CheckBox Content="Debug" IsChecked="{Binding ShowDebug}" 
+                                      Foreground="#FFB74D" FontWeight="SemiBold"/>
+                            <CheckBox Content="Errors" IsChecked="{Binding ShowErrors}" 
+                                      Foreground="#EF5350" FontWeight="SemiBold"/>
+                            <Separator Width="1" Background="#404D58" Margin="8,0"/>
+                            <CheckBox Content="Auto-scroll" IsChecked="{Binding AutoScroll}" 
+                                      Foreground="#FFFFFF"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Clear Log" Command="{Binding ClearLogCommand}" 
+                                Classes="secondary" Padding="12,4"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Log Content -->
+                <Border Grid.Row="1" Background="#1E2830" CornerRadius="4">
+                    <ScrollViewer Name="LogScrollViewer" 
+                                  HorizontalScrollBarVisibility="Auto" 
+                                  VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding FilteredLogEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="models:LogEntry">
+                                    <Border Padding="8,4" BorderBrush="#2D3740" BorderThickness="0,0,0,1">
+                                        <Grid ColumnDefinitions="120,80,*">
+                                            <TextBlock Grid.Column="0" 
+                                                       Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}"
+                                                       Foreground="#808080"
+                                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                       FontSize="12"
+                                                       VerticalAlignment="Top"/>
+                                            <Border Grid.Column="1" 
+                                                    CornerRadius="3" 
+                                                    Padding="6,2" 
+                                                    Margin="0,0,8,0"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Top">
+                                                <Border.Styles>
+                                                    <Style Selector="Border">
+                                                        <Setter Property="Background" Value="#404D58"/>
+                                                    </Style>
+                                                </Border.Styles>
+                                                <TextBlock Text="{Binding Type}"
+                                                           FontWeight="SemiBold"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           FontSize="11">
+                                                    <TextBlock.Styles>
+                                                        <Style Selector="TextBlock">
+                                                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                                        </Style>
+                                                    </TextBlock.Styles>
+                                                </TextBlock>
+                                            </Border>
+                                            <StackPanel Grid.Column="2" Spacing="2">
+                                                <TextBlock Text="{Binding Message}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           FontSize="12"
+                                                           TextWrapping="Wrap">
+                                                    <TextBlock.Styles>
+                                                        <Style Selector="TextBlock">
+                                                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                                                        </Style>
+                                                    </TextBlock.Styles>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding HexData}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           FontSize="10"
+                                                           Foreground="#606060"
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding HexData, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

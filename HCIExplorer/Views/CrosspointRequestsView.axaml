@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+             x:Class="HCIExplorer.Views.CrosspointRequestsView"
+             x:DataType="vm:CrosspointRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Crosspoint Requests" Classes="header"/>
+            
+            <!-- Crosspoint Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Crosspoint Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120,Auto,120" RowDefinitions="Auto">
+                        <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding SourcePort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Dest:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding DestinationPort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="4" Text="Level:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="5" Value="{Binding LevelValue}" Minimum="0" Maximum="287"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Status Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Status Queries" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Crosspoint Status" Command="{Binding RequestCrosspointStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Crosspoint Level" Command="{Binding RequestCrosspointLevelStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="System Crosspoint" Command="{Binding RequestSystemCrosspointCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="XPT &amp; Level Status" Command="{Binding RequestXptAndLevelStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Crosspoint Actions -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Crosspoint Actions" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Set Talk" Command="{Binding SetCrosspointTalkCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Clear Talk" Command="{Binding ClearCrosspointTalkCommand}" 
+                                Classes="secondary" Margin="4"/>
+                        <Button Content="Set Level" Command="{Binding SetCrosspointLevelCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Level Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Level Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Input Level Status" Command="{Binding RequestInputLevelStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Output Level Status" Command="{Binding RequestOutputLevelStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Forced Listen Edits" Command="{Binding RequestForcedListenEditsCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="HCIExplorer.Views.TelephonyRequestsView"
+             x:DataType="vm:TelephonyRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Telephony Requests" Classes="header"/>
+            
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,*" RowDefinitions="Auto">
+                        <TextBlock Text="Client ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding TelephonyClientId}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Dial Number:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <TextBox Grid.Column="3" Text="{Binding DialNumber}" Watermark="Enter phone number"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Status Requests -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Status Queries" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Client State" Command="{Binding RequestTelephonyClientStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Dial Info (Incoming)" Command="{Binding RequestTelephonyDialInfoIncomingCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Dial Info (Outgoing)" Command="{Binding RequestTelephonyDialInfoOutgoingCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="VoIP Status" Command="{Binding RequestVoIPStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Trunk Statistics" Command="{Binding RequestTrunkUsageStatisticsCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Actions -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Actions" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Enable Key Status" Command="{Binding RequestTelephonyKeyStatusEnableCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Disable Key Status" Command="{Binding RequestTelephonyKeyStatusDisableCommand}" 
+                                Classes="secondary" Margin="4"/>
+                        <Button Content="Disconnect" Command="{Binding RequestDisconnectTelephonyCommand}" 
+                                Classes="secondary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

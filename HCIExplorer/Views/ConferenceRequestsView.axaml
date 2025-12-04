@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="HCIExplorer.Views.ConferenceRequestsView"
+             x:DataType="vm:ConferenceRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Conference / Key Group Requests" Classes="header"/>
+            
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120,Auto,120" RowDefinitions="Auto">
+                        <TextBlock Text="Conference ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding ConferenceId}" Minimum="0" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Member Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding MemberPort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="4" Text="KG System #:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="5" Value="{Binding KeyGroupSystemNumber}" Minimum="0" Maximum="255"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Conference Status -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Conference Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Conference Status" Command="{Binding RequestConferenceStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="All Conferences" Command="{Binding RequestAllConferencesCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Fixed Group Members" Command="{Binding RequestConferenceFixedGroupMembersCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Key Groups -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Key Groups" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="All Key Group Statuses" Command="{Binding RequestAllKeyGroupStatusesCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Key Group Status" Command="{Binding RequestKeyGroupStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

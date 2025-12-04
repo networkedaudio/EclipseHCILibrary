@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+             x:Class="HCIExplorer.Views.MiscRequestsView"
+             x:DataType="vm:MiscRequestsViewModel">
+    
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Miscellaneous Requests" Classes="header"/>
+            
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120,Auto,*" RowDefinitions="Auto,Auto">
+                        <TextBlock Text="Entity ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding EntityId}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Target Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding TargetPort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="4" Text="Alias:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <TextBox Grid.Column="5" Text="{Binding AliasText}" Watermark="Alias text"/>
+                        
+                        <TextBlock Grid.Row="1" Text="Matrix ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,8,8,0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MatrixId}" Minimum="0" Maximum="255" Margin="0,8,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="IFB ID:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,8,8,0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding IfbId}" Minimum="1" Maximum="65535" Margin="0,8,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="4" Text="Monitor Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,8,8,0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="5" Value="{Binding MonitorPort}" Minimum="1" Maximum="2047" Margin="0,8,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Entity Info -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Entity Information" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Entity Info" Command="{Binding RequestEntityInfoCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Aliases -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Aliases" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Unicode Alias List" Command="{Binding RequestUnicodeAliasListCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Add Alias" Command="{Binding RequestUnicodeAliasAddCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Delete Alias" Command="{Binding RequestAliasDeleteCommand}" 
+                                Classes="secondary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- IFB & Audio -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="IFB &amp; Audio" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="IFB Status" Command="{Binding RequestIfbStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="VOX Threshold" Command="{Binding RequestVoxThresholdStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Audio Monitor" Command="{Binding RequestAudioMonitorActionsCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Proxy -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Proxy &amp; Remote Keys" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120" RowDefinitions="Auto" Margin="0,0,0,8">
+                        <TextBlock Text="Proxy Port:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding ProxyPort}" Minimum="1" Maximum="65535"/>
+                        <TextBlock Grid.Column="2" Text="Key:" VerticalAlignment="Center" Foreground="#A8B4BE" Margin="16,0,8,0"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding ProxyKey}" Minimum="1" Maximum="255"/>
+                    </Grid>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Proxy Display Data" Command="{Binding RequestGetProxyDisplayDataCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Proxy Indication State" Command="{Binding RequestGetProxyIndicationStateCommand}" 
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Remote Key Status" Command="{Binding RequestRemoteKeyActionStatusCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Rack -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Rack Properties" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Rack State" Command="{Binding RequestRackPropertiesRackStateGetCommand}" 
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
