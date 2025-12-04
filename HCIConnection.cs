@@ -1,4 +1,5 @@
 using HCILibrary.Enums;
+using HCILibrary.Helpers;
 using HCILibrary.Models;
 using System.Net.Sockets;
 
@@ -196,6 +197,9 @@ public class HCIConnection : IDisposable
         }
 
         var message = request.BuildMessage();
+
+        DebugHelper.WriteBytes($"TX [{request.MessageID}]", message);
+
         await _stream.WriteAsync(message);
 
         // Track pending request if it expects a response
