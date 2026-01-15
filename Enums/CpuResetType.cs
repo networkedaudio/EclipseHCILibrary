@@ -14,10 +14,10 @@ public enum CpuResetType : byte
     /// <summary>
     /// Red reset (bit 0).
     /// </summary>
-    Red = 1 << 0,
+    Red = 1,
 
     /// <summary>
     /// Black reset (bit 1).
     /// </summary>
-    Black = 1 << 1
+    Black = 3
 }

@@ -65,6 +65,8 @@ public class RequestCpuResetRequest : HCIRequest
         // Reset Type: 1 byte (bit 0 = red, bit 1 = black)
         payload[offset++] = (byte)ResetType;
 
+
+
         return payload;
     }
 }

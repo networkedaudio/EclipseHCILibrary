@@ -24,6 +24,7 @@ public class HCIConnection : IDisposable
     private readonly int _startPort;
     private readonly int _endPort;
     private readonly int _connectionTimeoutMs;
+    private readonly int _readTimeoutMs;
     
     private TcpClient? _client;
     private NetworkStream? _stream;
@@ -75,12 +76,14 @@ public class HCIConnection : IDisposable
     /// <param name="startPort">The starting port number (default: 52020).</param>
     /// <param name="endPort">The ending port number (default: 52001).</param>
     /// <param name="connectionTimeoutMs">Connection timeout in milliseconds (default: 5000).</param>
-    public HCIConnection(string ipAddress, int startPort = 52020, int endPort = 52001, int connectionTimeoutMs = 5000)
+    /// <param name="readTimeoutMs">Read timeout in milliseconds for detecting inactive connections (default: 30000).</param>
+    public HCIConnection(string ipAddress, int startPort = 52020, int endPort = 52001, int connectionTimeoutMs = 5000, int readTimeoutMs = 30000)
     {
         _ipAddress = ipAddress ?? throw new ArgumentNullException(nameof(ipAddress));
         _startPort = startPort;
         _endPort = endPort;
         _connectionTimeoutMs = connectionTimeoutMs;
+        _readTimeoutMs = readTimeoutMs;
         _currentPort = startPort;
     }
 
@@ -104,7 +107,10 @@ public class HCIConnection : IDisposable
 
             try
             {
-                await DisconnectAsync();
+                if (IsConnected)
+                {
+                    await DisconnectAsync();
+                }
 
                 _client = new TcpClient();
                 _currentPort = port;
@@ -232,11 +238,14 @@ public class HCIConnection : IDisposable
         {
             try
             {
-                int bytesRead = await _stream.ReadAsync(readBuffer, cancellationToken);
+                using var readTimeoutCts = new CancellationTokenSource(_readTimeoutMs);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, readTimeoutCts.Token);
+
+                int bytesRead = await _stream.ReadAsync(readBuffer, linkedCts.Token);
                 
                 if (bytesRead == 0)
                 {
-                    // Connection closed
+                    // Connection closed gracefully by remote host
                     break;
                 }
 
@@ -250,8 +259,15 @@ public class HCIConnection : IDisposable
 
                 ProcessBuffer();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Expected when manually disconnecting
+                break;
+            }
             catch (OperationCanceledException)
             {
+                // Read timeout - no data received within the timeout period
+                ErrorOccurred?.Invoke(this, new TimeoutException($"No data received within {_readTimeoutMs}ms. Connection appears inactive."));
                 break;
             }
             catch (Exception ex)
@@ -259,6 +275,12 @@ public class HCIConnection : IDisposable
                 ErrorOccurred?.Invoke(this, ex);
                 break;
             }
+        }
+
+        // Handle unexpected disconnection
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            await DisconnectAsync();
         }
     }
 

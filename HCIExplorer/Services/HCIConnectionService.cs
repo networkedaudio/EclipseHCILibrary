@@ -16,7 +16,7 @@ public partial class HCIConnectionService : ObservableObject
     private bool _isConnected;
     
     [ObservableProperty]
-    private string _hostAddress = "192.168.1.100";
+    private string _hostAddress = MatrixDiscoveryService.DefaultHostAddress;
     
     [ObservableProperty]
     private string _connectionStatus = "Disconnected";

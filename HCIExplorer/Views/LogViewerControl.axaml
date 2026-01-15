@@ -12,6 +12,14 @@
         <Style Selector="ItemsControl">
             <Setter Property="Background" Value="#1A2A3A"/>
         </Style>
+        
+        <!-- Add hover effect for clickable log entries -->
+        <Style Selector="Border.LogEntry:pointerover">
+            <Setter Property="Background" Value="#2D3740"/>
+        </Style>
+        <Style Selector="Border.LogEntry">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
     </UserControl.Styles>
     
     <Border Background="#1A2A3A" CornerRadius="4" Padding="8">
@@ -43,7 +51,11 @@
                     <ItemsControl Name="LogItemsControl" ItemsSource="{Binding LogEntries}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="models:LogEntry">
-                                <Border Padding="4,2" BorderBrush="#2D3740" BorderThickness="0,0,0,1">
+                                <Border Padding="4,2" 
+                                        BorderBrush="#2D3740" 
+                                        BorderThickness="0,0,0,1"
+                                        Classes="LogEntry"
+                                        Background="Transparent">
                                     <Grid ColumnDefinitions="140,80,*">
                                         <TextBlock Grid.Column="0" 
                                                    Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}"
@@ -72,12 +84,15 @@
                                                     </Style>
                                                 </TextBlock.Styles>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding HexData}"
+                                            <SelectableTextBlock Text="{Binding HexData}"
                                                        FontFamily="Consolas,Menlo,monospace"
                                                        FontSize="11"
                                                        Foreground="#606060"
                                                        TextWrapping="Wrap"
-                                                       IsVisible="{Binding HexData, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                        PointerPressed="OnLogEntryClick"
+                                                       IsVisible="{Binding HexData, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                       />
+                                          
                                         </StackPanel>
                                     </Grid>
                                 </Border>

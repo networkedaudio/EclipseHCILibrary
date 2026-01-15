@@ -99,9 +99,9 @@ public class RequestGetPanelAudioFrontEndStateRequest : HCIRequest
     {
         var payload = GeneratePayload();
 
-        // Calculate total length (excluding start marker but including length bytes and end marker)
-        // Length = 2 (length) + 2 (message ID) + 1 (flags) + payload + 2 (end marker)
-        ushort length = (ushort)(2 + 2 + 1 + payload.Length + 2);
+        // Calculate total length 
+        // Length = 2 (start marker) + 2 (length) + 2 (message ID) + 1 (flags) + payload + 2 (end marker)
+        ushort length = (ushort)(2 + 2 + 2 + 1 + payload.Length + 2);
 
         using var ms = new MemoryStream();
 

@@ -1,7 +1,9 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using System.Collections.Specialized;
 using HCIExplorer.Services;
+using HCIExplorer.Models;
 
 namespace HCIExplorer.Views;
 
@@ -41,5 +43,21 @@ public partial class LogViewerControl : UserControl
     private void OnClearClick(object? sender, RoutedEventArgs e)
     {
         LogService.Instance.Clear();
+    }
+
+    private async void OnLogEntryClick(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is LogEntry logEntry)
+        {
+            if (!string.IsNullOrEmpty(logEntry.HexData))
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(logEntry.HexData);
+                    LogService.Instance.LogDebug($"Copied hex data to clipboard: {logEntry.HexData.Substring(0, Math.Min(20, logEntry.HexData.Length))}...");
+                }
+            }
+        }
     }
 }

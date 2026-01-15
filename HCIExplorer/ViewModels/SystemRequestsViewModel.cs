@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HCIExplorer.Services;
+using HCILibrary.Enums;
 using HCILibrary.HCIRequests;
 
 namespace HCIExplorer.ViewModels;
@@ -53,6 +54,16 @@ public partial class SystemRequestsViewModel : ViewModelBase
     private async Task RequestActionsStatusAsync()
     {
         var request = new RequestActionsStatusRequest();
+        await _connectionService.SendRequestAsync(request);
+    }
+    
+    [ObservableProperty]
+    private CpuResetType _selectedResetType = CpuResetType.Red;
+    
+    [RelayCommand]
+    private async Task RequestResetAsync()
+    {
+        var request = new RequestCpuResetRequest(SelectedResetType);
         await _connectionService.SendRequestAsync(request);
     }
     

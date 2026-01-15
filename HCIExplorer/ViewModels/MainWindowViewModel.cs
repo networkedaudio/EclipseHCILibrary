@@ -10,7 +10,7 @@ namespace HCIExplorer.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _hostAddress = "192.168.1.100";
+    private string _hostAddress = MatrixDiscoveryService.DefaultHostAddress;
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConnectButtonText))]
@@ -42,6 +42,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<LogEntry> _filteredLogEntries = new();
     
+    // Discovery
+    [ObservableProperty]
+    private ObservableCollection<DiscoveredMatrix> _discoveredMatrices;
+    
+    [ObservableProperty]
+    private DiscoveredMatrix? _selectedDiscoveredMatrix;
+    
+    [ObservableProperty]
+    private bool _isDiscoveryActive;
+    
+    [ObservableProperty]
+    private bool _isDropdownOpen;
+    
     // Tab ViewModels
     [ObservableProperty]
     private SystemRequestsViewModel _systemRequests;
@@ -69,16 +82,23 @@ public partial class MainWindowViewModel : ViewModelBase
     
     private readonly HCIConnectionService _connectionService;
     private readonly LogService _logService;
+    private readonly MatrixDiscoveryService _discoveryService;
     
     public MainWindowViewModel()
     {
         _connectionService = HCIConnectionService.Instance;
         _logService = LogService.Instance;
+        _discoveryService = MatrixDiscoveryService.Instance;
+        
         _logEntries = _logService.LogEntries;
         _filteredLogEntries = new ObservableCollection<LogEntry>();
+        _discoveredMatrices = _discoveryService.DiscoveredMatrices;
         
         // Subscribe to log entry changes
         _logEntries.CollectionChanged += OnLogEntriesChanged;
+        
+        // Subscribe to discovered matrices changes
+        _discoveredMatrices.CollectionChanged += OnDiscoveredMatricesChanged;
         
         // Initialize tab view models
         _systemRequests = new SystemRequestsViewModel();
@@ -98,6 +118,16 @@ public partial class MainWindowViewModel : ViewModelBase
             if (e.PropertyName == nameof(HCIConnectionService.ConnectionStatus))
                 ConnectionStatus = _connectionService.ConnectionStatus;
         };
+        
+        // Subscribe to discovery changes
+        _discoveryService.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(MatrixDiscoveryService.IsDiscoveryActive))
+                IsDiscoveryActive = _discoveryService.IsDiscoveryActive;
+        };
+        
+        // Start discovery automatically
+        StartDiscoveryCommand.Execute(null);
     }
     
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -115,6 +145,23 @@ public partial class MainWindowViewModel : ViewModelBase
         else if (e.Action == NotifyCollectionChangedAction.Reset)
         {
             RefreshFilteredEntries();
+        }
+    }
+    
+    private void OnDiscoveredMatricesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+        {
+            // If this is the first discovered matrix and we still have the default IP, replace it
+            if (DiscoveredMatrices.Count == 1 && HostAddress == MatrixDiscoveryService.DefaultHostAddress)
+            {
+                var firstMatrix = e.NewItems[0] as DiscoveredMatrix;
+                if (firstMatrix != null)
+                {
+                    HostAddress = firstMatrix.IpAddress;
+                    LogService.Instance.LogDebug($"Auto-populated host address with discovered matrix: {firstMatrix.IpAddress}");
+                }
+            }
         }
     }
     
@@ -161,6 +208,18 @@ public partial class MainWindowViewModel : ViewModelBase
         _logService.Clear();
     }
     
+    [RelayCommand]
+    private void StartDiscovery()
+    {
+        _discoveryService.StartDiscovery();
+    }
+    
+    [RelayCommand]
+    private async Task StopDiscoveryAsync()
+    {
+        await _discoveryService.StopDiscoveryAsync();
+    }
+    
     partial void OnShowRequestsChanged(bool value)
     {
         _logService.ShowRequests = value;
@@ -188,5 +247,14 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnAutoScrollChanged(bool value)
     {
         _logService.AutoScroll = value;
+    }
+    
+    partial void OnSelectedDiscoveredMatrixChanged(DiscoveredMatrix? value)
+    {
+        if (value != null)
+        {
+            HostAddress = value.IpAddress;
+            IsDropdownOpen = false;
+        }
     }
 }

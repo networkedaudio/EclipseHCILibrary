@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.36631.11
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HCILibrary", "HCILibrary.csproj", "{757A8E5D-5A6C-463B-AD5E-8AC2ED51650D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HCIExplorer", "HCIExplorer\HCIExplorer.csproj", "{6DB4B4C5-1A54-4177-BEE8-C83ED9CEA335}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{757A8E5D-5A6C-463B-AD5E-8AC2ED51650D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{757A8E5D-5A6C-463B-AD5E-8AC2ED51650D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{757A8E5D-5A6C-463B-AD5E-8AC2ED51650D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{757A8E5D-5A6C-463B-AD5E-8AC2ED51650D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DB4B4C5-1A54-4177-BEE8-C83ED9CEA335}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DB4B4C5-1A54-4177-BEE8-C83ED9CEA335}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DB4B4C5-1A54-4177-BEE8-C83ED9CEA335}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DB4B4C5-1A54-4177-BEE8-C83ED9CEA335}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B026BEB1-160A-44FC-B9C3-F2CDBF7F17F2}
+	EndGlobalSection
+EndGlobal
