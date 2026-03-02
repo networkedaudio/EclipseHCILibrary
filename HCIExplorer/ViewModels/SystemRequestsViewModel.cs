@@ -1,8 +1,14 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HCIExplorer.Services;
 using HCILibrary.Enums;
 using HCILibrary.HCIRequests;
+using HCILibrary.HCIResponses;
+using HCILibrary.Models;
+
+// Add an explicit using alias to resolve ambiguity for RequestActionsStatusRequest
+using ActionsStatusRequest = HCILibrary.HCIRequests.RequestActionsStatusRequest;
 
 namespace HCIExplorer.ViewModels;
 
@@ -10,9 +16,40 @@ public partial class SystemRequestsViewModel : ViewModelBase
 {
     private readonly HCIConnectionService _connectionService;
     
+    [ObservableProperty]
+    private ObservableCollection<CardStatus> _systemCards = new();
+    
+    [ObservableProperty]
+    private string _lastSystemStatusMessage = string.Empty;
+    
+    [ObservableProperty]
+    private bool _hasSystemCards;
+    
     public SystemRequestsViewModel()
     {
         _connectionService = HCIConnectionService.Instance;
+        _connectionService.ReplyReceived += OnReplyReceived;
+    }
+    
+    private void OnReplyReceived(object? sender, HCIReply reply)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (reply.SystemCardStatus is { } status)
+            {
+                SystemCards.Clear();
+                foreach (var card in status.Cards)
+                {
+                    SystemCards.Add(card);
+                }
+                HasSystemCards = SystemCards.Count > 0;
+                LastSystemStatusMessage = $"Received {status.Count} card(s) at {DateTime.Now:HH:mm:ss}";
+                
+                LogService.Instance.LogDebug(
+                    $"System Status: {status.Count} cards — " +
+                    string.Join(", ", status.Cards.Select(c => $"{c.CardType}:{c.Condition}")));
+            }
+        });
     }
     
     [RelayCommand]
@@ -53,7 +90,8 @@ public partial class SystemRequestsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RequestActionsStatusAsync()
     {
-        var request = new RequestActionsStatusRequest();
+        // Use the alias to resolve ambiguity
+        var request = new ActionsStatusRequest();
         await _connectionService.SendRequestAsync(request);
     }
     

@@ -8,6 +8,10 @@
              x:Class="HCIExplorer.Views.SystemRequestsView"
              x:DataType="vm:SystemRequestsViewModel">
 
+  <UserControl.Styles>
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+  </UserControl.Styles>
+
   <ScrollViewer>
     <StackPanel Spacing="16" Margin="16">
       <TextBlock Text="System Requests" Classes="header"/>
@@ -30,6 +34,28 @@
             <Button Content="Actions Status" Command="{Binding RequestActionsStatusCommand}"
                     Classes="primary" Margin="4"/>
           </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- System Status Results -->
+      <Border Classes="card"
+              IsVisible="{Binding HasSystemCards}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="System Card Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="{Binding LastSystemStatusMessage}" FontSize="12" Foreground="#AAAAAA"/>
+          <DataGrid ItemsSource="{Binding SystemCards}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="Horizontal"
+                    MaxHeight="300">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Slot" Binding="{Binding IsSlotZero}" Width="60"/>
+              <DataGridTextColumn Header="Card Type" Binding="{Binding CardType}" Width="*"/>
+              <DataGridTextColumn Header="Condition" Binding="{Binding Condition}" Width="*"/>
+              <DataGridTextColumn Header="Raw Status" Binding="{Binding RawStatus, StringFormat=0x{0:X4}}" Width="100"/>
+            </DataGrid.Columns>
+          </DataGrid>
         </StackPanel>
       </Border>
 

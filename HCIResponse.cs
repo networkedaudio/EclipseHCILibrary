@@ -36,7 +36,7 @@ public static class HCIResponse
 
         // Validate total length matches
         // Total message = start(2) + length field value
-        if (message.Length != reply.MessageLength + 2)
+        if (message.Length != reply.MessageLength)
         {
             return null;
         }

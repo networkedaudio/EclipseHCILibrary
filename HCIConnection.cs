@@ -331,7 +331,7 @@ public class HCIConnection : IDisposable
                     ushort expectedLength = (ushort)((message[2] << 8) | message[3]);
                     
                     // Total message should be: start(2) + length field value
-                    if (message.Length == expectedLength + 2)
+                    if (message.Length == expectedLength)
                     {
                         // Hand off to HCIResponse for decoding
                         var reply = HCIResponse.Decode(message);
