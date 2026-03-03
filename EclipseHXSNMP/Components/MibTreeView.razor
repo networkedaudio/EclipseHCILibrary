@@ -1,0 +1,46 @@
+@* Recursive MIB tree view component *@
+
+<div class="tree-node">
+    <div class="tree-node-header @(Node.IsLeaf ? "leaf" : "branch")" @onclick="Toggle">
+        @if (Node.HasChildren)
+        {
+            <span class="tree-toggle">@(Node.IsExpanded ? "▼" : "▶")</span>
+        }
+        else
+        {
+            <span class="tree-toggle-spacer"></span>
+        }
+
+        <span class="tree-name" title="@Node.Oid">@Node.Name</span>
+
+        @if (Node.Value != null)
+        {
+            <span class="tree-value">@Node.Value</span>
+        }
+
+        <span class="tree-oid">@Node.Oid</span>
+    </div>
+
+    @if (Node.IsExpanded && Node.HasChildren)
+    {
+        <div class="tree-children">
+            @foreach (var child in Node.Children)
+            {
+                <MibTreeView Node="child" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public MibTreeNode Node { get; set; } = new();
+
+    private void Toggle()
+    {
+        if (Node.HasChildren)
+        {
+            Node.IsExpanded = !Node.IsExpanded;
+        }
+    }
+}

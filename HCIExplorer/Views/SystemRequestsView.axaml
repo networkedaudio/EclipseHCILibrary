@@ -59,6 +59,66 @@
         </StackPanel>
       </Border>
 
+      <!-- Frame Status Results -->
+      <Border Classes="card"
+              IsVisible="{Binding HasFrameStatus}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Frame Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="{Binding LastFrameStatusMessage}" FontSize="12" Foreground="#AAAAAA"/>
+          <DataGrid ItemsSource="{Binding FrameStatusEntries}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="Horizontal"
+                    MaxHeight="400">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </StackPanel>
+      </Border>
+
+      <!-- Rack Configuration Results -->
+      <Border Classes="card"
+              IsVisible="{Binding HasRackConfig}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Rack Configuration" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="{Binding LastRackConfigMessage}" FontSize="12" Foreground="#AAAAAA"/>
+          <DataGrid ItemsSource="{Binding RackConfigEntries}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="Horizontal"
+                    MaxHeight="400">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Value" Binding="{Binding Status}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </StackPanel>
+      </Border>
+
+      <!-- Rack Properties Results -->
+      <Border Classes="card"
+              IsVisible="{Binding HasRackProperties}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Rack Properties" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="{Binding LastRackPropertiesMessage}" FontSize="12" Foreground="#AAAAAA"/>
+          <DataGrid ItemsSource="{Binding RackPropertiesEntries}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="Horizontal"
+                    MaxHeight="400">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Value" Binding="{Binding Status}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </StackPanel>
+      </Border>
+
       <!-- Reset Requests -->
       <Border Classes="card">
         <StackPanel Spacing="12">

@@ -1,0 +1,248 @@
+-- ECLIPSE-HX-MIB: SNMP MIB for Clear-Com Eclipse HX Matrix
+-- Enterprise OID: 1.3.6.1.4.1.99999 (placeholder - replace with assigned PEN)
+
+ECLIPSE-HX-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, Integer32, Counter32
+        FROM SNMPv2-SMI
+    DisplayString, TruthValue
+        FROM SNMPv2-TC
+    MODULE-COMPLIANCE, OBJECT-GROUP
+        FROM SNMPv2-CONF;
+
+eclipseHxMIB MODULE-IDENTITY
+    LAST-UPDATED "202506010000Z"
+    ORGANIZATION "Clear-Com"
+    CONTACT-INFO "Eclipse HX SNMP Agent"
+    DESCRIPTION  "MIB for monitoring Clear-Com Eclipse HX intercom matrices."
+    REVISION     "202506010000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99999 }
+
+-- Top-level nodes
+eclipseHx       OBJECT IDENTIFIER ::= { eclipseHxMIB 1 }
+eclipseCards    OBJECT IDENTIFIER ::= { eclipseHx 1 }
+eclipsePorts    OBJECT IDENTIFIER ::= { eclipseHx 2 }
+eclipsePsu      OBJECT IDENTIFIER ::= { eclipseHx 3 }
+
+-- ============================================================
+-- Card Table
+-- ============================================================
+
+cardCount OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Total number of cards in the matrix."
+    ::= { eclipseCards 1 }
+
+cardTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF CardEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Table of card status entries."
+    ::= { eclipseCards 2 }
+
+cardEntry OBJECT-TYPE
+    SYNTAX      CardEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "A single card status entry."
+    INDEX       { cardIndex }
+    ::= { cardTable 1 }
+
+CardEntry ::= SEQUENCE {
+    cardIndex       Integer32,
+    cardType        DisplayString,
+    cardCondition   DisplayString,
+    cardIsSlotZero  TruthValue,
+    cardRawStatus   Integer32
+}
+
+cardIndex OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "1-based index of this card entry."
+    ::= { cardEntry 1 }
+
+cardType OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..64))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Card type name."
+    ::= { cardEntry 2 }
+
+cardCondition OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..32))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Card condition (Good, FaultyOrAbsent, Unknown)."
+    ::= { cardEntry 3 }
+
+cardIsSlotZero OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Whether this is slot 0 of the rack."
+    ::= { cardEntry 4 }
+
+cardRawStatus OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Raw 16-bit status word."
+    ::= { cardEntry 5 }
+
+-- ============================================================
+-- Port Table
+-- ============================================================
+
+portCount OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Total number of ports/panels in the matrix."
+    ::= { eclipsePorts 1 }
+
+portTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF PortEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Table of port/panel status entries."
+    ::= { eclipsePorts 2 }
+
+portEntry OBJECT-TYPE
+    SYNTAX      PortEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "A single port/panel status entry."
+    INDEX       { portIndex }
+    ::= { portTable 1 }
+
+PortEntry ::= SEQUENCE {
+    portIndex       Integer32,
+    portNumber      Integer32,
+    portPanelType   DisplayString,
+    portState       DisplayString,
+    portIsAoip      TruthValue
+}
+
+portIndex OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "1-based index of this port entry."
+    ::= { portEntry 1 }
+
+portNumber OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Panel/port number."
+    ::= { portEntry 2 }
+
+portPanelType OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..64))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Panel type name."
+    ::= { portEntry 3 }
+
+portState OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..32))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Panel state (Good, Absent, Faulty, Unknown)."
+    ::= { portEntry 4 }
+
+portIsAoip OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Whether this is an Audio over IP device."
+    ::= { portEntry 5 }
+
+-- ============================================================
+-- PSU / Frame Status
+-- ============================================================
+
+psuCpuTemperature OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "CPU card temperature in degrees Celsius."
+    ::= { eclipsePsu 1 }
+
+psuExtPsu1Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "External PSU 1 failure status."
+    ::= { eclipsePsu 2 }
+
+psuExtPsu2Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "External PSU 2 failure status."
+    ::= { eclipsePsu 3 }
+
+psuIntPsu1Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Internal PSU 1 failure status."
+    ::= { eclipsePsu 4 }
+
+psuIntPsu2Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Internal PSU 2 failure status."
+    ::= { eclipsePsu 5 }
+
+psuFan1Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Fan 1 failure status."
+    ::= { eclipsePsu 6 }
+
+psuFan2Failed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Fan 2 failure status."
+    ::= { eclipsePsu 7 }
+
+psuConfigFailed OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Configuration failure status."
+    ::= { eclipsePsu 8 }
+
+psuExtAlarmActive OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "External alarm active status."
+    ::= { eclipsePsu 9 }
+
+psuOvertemp OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Over-temperature alarm status."
+    ::= { eclipsePsu 10 }
+
+psuHasAnyAlarm OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Whether any alarm condition is active."
+    ::= { eclipsePsu 11 }
+
+END

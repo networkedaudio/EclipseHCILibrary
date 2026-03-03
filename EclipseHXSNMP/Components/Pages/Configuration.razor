@@ -1,0 +1,176 @@
+@page "/configuration"
+@inject ConfigurationService ConfigService
+
+<h1>Matrix Configuration</h1>
+<p>Configure IP addresses for Eclipse HX matrices. The app connects via HCI (TCP) to poll status and exposes it over SNMP. Changes are saved to <code>matrix-config.xml</code>.</p>
+
+<div class="config-section">
+    <h2>Configured Matrices</h2>
+
+    @if (ConfigService.Configuration.Matrices.Count == 0)
+    {
+        <p class="muted">No matrices configured. Add one below.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>IP Address</th>
+                    <th>Enabled</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < ConfigService.Configuration.Matrices.Count; i++)
+                {
+                    var index = i;
+                    var matrix = ConfigService.Configuration.Matrices[index];
+                    <tr>
+                        <td>@matrix.Name</td>
+                        <td><code>@matrix.IpAddress</code></td>
+                        <td>
+                            <input type="checkbox" checked="@matrix.Enabled"
+                                   @onchange="e => ToggleEnabled(index, (bool)(e.Value ?? false))" />
+                        </td>
+                        <td>
+                            <button class="btn btn-small" @onclick="() => EditMatrix(index)">Edit</button>
+                            <button class="btn btn-small btn-danger" @onclick="() => RemoveMatrix(index)">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<div class="config-section">
+    <h2>@(_editingIndex >= 0 ? "Edit Matrix" : "Add Matrix")</h2>
+
+    <div class="form-grid">
+        <label>Name:</label>
+        <input type="text" @bind="_name" placeholder="e.g., Studio A Matrix" />
+
+        <label>IP Address:</label>
+        <input type="text" @bind="_ipAddress" placeholder="e.g., 192.168.1.100" />
+    </div>
+
+    <div class="advanced-toggle">
+        <button class="btn btn-small btn-secondary" @onclick="() => _showAdvanced = !_showAdvanced">
+            @(_showAdvanced ? "Hide" : "Show") Advanced (SNMP)
+        </button>
+    </div>
+
+    @if (_showAdvanced)
+    {
+        <div class="form-grid" style="margin-top: 12px;">
+            <label>SNMP Port:</label>
+            <input type="number" @bind="_port" min="1" max="65535" />
+
+            <label>Community:</label>
+            <input type="text" @bind="_community" placeholder="public" />
+        </div>
+        <p class="muted" style="font-size: 12px; margin-top: 4px;">
+            SNMP port and community are used by the MIB Browser to query the agent. HCI connection uses TCP ports 52020–52001 automatically.
+        </p>
+    }
+
+    <div class="form-actions">
+        <button class="btn" @onclick="SaveMatrix">
+            @(_editingIndex >= 0 ? "Update" : "Add")
+        </button>
+        @if (_editingIndex >= 0)
+        {
+            <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <p class="message">@_message</p>
+    }
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private string _ipAddress = string.Empty;
+    private int _port = 161;
+    private string _community = "public";
+    private int _editingIndex = -1;
+    private string _message = string.Empty;
+    private bool _showAdvanced;
+
+    private void SaveMatrix()
+    {
+        if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_ipAddress))
+        {
+            _message = "Name and IP Address are required.";
+            return;
+        }
+
+        var matrix = new MatrixConnection
+        {
+            Name = _name.Trim(),
+            IpAddress = _ipAddress.Trim(),
+            Port = _port,
+            Community = _community.Trim(),
+            Enabled = true
+        };
+
+        if (_editingIndex >= 0)
+        {
+            ConfigService.UpdateMatrix(_editingIndex, matrix);
+            _message = $"Updated '{matrix.Name}'.";
+        }
+        else
+        {
+            ConfigService.AddMatrix(matrix);
+            _message = $"Added '{matrix.Name}'.";
+        }
+
+        ResetForm();
+    }
+
+    private void EditMatrix(int index)
+    {
+        var matrix = ConfigService.Configuration.Matrices[index];
+        _name = matrix.Name;
+        _ipAddress = matrix.IpAddress;
+        _port = matrix.Port;
+        _community = matrix.Community;
+        _editingIndex = index;
+        _message = string.Empty;
+    }
+
+    private void RemoveMatrix(int index)
+    {
+        var name = ConfigService.Configuration.Matrices[index].Name;
+        ConfigService.RemoveMatrix(index);
+        _message = $"Removed '{name}'.";
+        if (_editingIndex == index)
+            ResetForm();
+    }
+
+    private void ToggleEnabled(int index, bool enabled)
+    {
+        var matrix = ConfigService.Configuration.Matrices[index];
+        matrix.Enabled = enabled;
+        ConfigService.UpdateMatrix(index, matrix);
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+        _message = string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        _name = string.Empty;
+        _ipAddress = string.Empty;
+        _port = 161;
+        _community = "public";
+        _editingIndex = -1;
+    }
+}

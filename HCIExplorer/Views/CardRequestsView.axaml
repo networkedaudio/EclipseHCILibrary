@@ -6,7 +6,11 @@
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="HCIExplorer.Views.CardRequestsView"
              x:DataType="vm:CardRequestsViewModel">
-    
+
+    <UserControl.Styles>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </UserControl.Styles>
+
     <ScrollViewer>
         <StackPanel Spacing="16" Margin="16">
             <TextBlock Text="Card / Port Requests" Classes="header"/>
@@ -44,7 +48,81 @@
                     </WrapPanel>
                 </StackPanel>
             </Border>
-            
+
+            <!-- Card Info Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasCardInfo}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Card Info Results" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastCardInfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding CardInfoEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Rack" Binding="{Binding RackNumber}" Width="50"/>
+                            <DataGridTextColumn Header="Slot" Binding="{Binding SlotNumber}" Width="50"/>
+                            <DataGridTextColumn Header="Slot Type" Binding="{Binding SlotType}" Width="80"/>
+                            <DataGridTextColumn Header="Current Type" Binding="{Binding CurrentCardType}" Width="*"/>
+                            <DataGridTextColumn Header="Expected Type" Binding="{Binding ExpectedCardType}" Width="*"/>
+                            <DataGridTextColumn Header="Health" Binding="{Binding Health}" Width="80"/>
+                            <DataGridTextColumn Header="Channels" Binding="{Binding Channels}" Width="70"/>
+                            <DataGridTextColumn Header="Ports" Binding="{Binding FirstPort, StringFormat={}{0}}" Width="60"/>
+                            <DataGridTextColumn Header="App Version" Binding="{Binding AppVersionStr}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Port Info Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPortInfo}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Port Info Results" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPortInfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PortInfoEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Port #" Binding="{Binding PortNumber}" Width="70"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="*"/>
+                            <DataGridTextColumn Header="Online" Binding="{Binding OperationalStatus.IsOnline}" Width="60"/>
+                            <DataGridTextColumn Header="Port Type" Binding="{Binding OperationalStatus.PortType}" Width="80"/>
+                            <DataGridTextColumn Header="Firmware" Binding="{Binding PanelFirmware}" Width="100"/>
+                            <DataGridTextColumn Header="Kernel" Binding="{Binding KernelVersion}" Width="80"/>
+                            <DataGridTextColumn Header="Keys" Binding="{Binding NumberOfKeys}" Width="50"/>
+                            <DataGridTextColumn Header="Label" Binding="{Binding TalkListenLabel}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- EHX Control Card Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasEhxCards}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="EHX Control Card Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastEhxCardMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding EhxCardEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Card #" Binding="{Binding CardNumber}" Width="80"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding CardType}" Width="*"/>
+                            <DataGridCheckBoxColumn Header="Present" Binding="{Binding IsPresent}" Width="70"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
             <!-- Network & Redundancy -->
             <Border Classes="card">
                 <StackPanel Spacing="12">
@@ -59,7 +137,71 @@
                     </WrapPanel>
                 </StackPanel>
             </Border>
-            
+
+            <!-- Network Redundancy Card Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasNetRedundancyCards}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Network Redundancy Card Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastNetRedundancyCardMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding NetRedundancyCardEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Slot" Binding="{Binding PhysicalSlot}" Width="60"/>
+                            <DataGridTextColumn Header="IVC State" Binding="{Binding IvcState}" Width="*"/>
+                            <DataGridTextColumn Header="IVC Switches" Binding="{Binding IvcSwitchoverCount}" Width="90"/>
+                            <DataGridTextColumn Header="AoIP State" Binding="{Binding AoipState}" Width="*"/>
+                            <DataGridTextColumn Header="AoIP Switches" Binding="{Binding AoipSwitchoverCount}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Network Redundancy Endpoint Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasNetRedundancyEndpoints}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Network Redundancy Endpoint Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastNetRedundancyEndpointMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding NetRedundancyEndpointEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Port" Binding="{Binding PhysicalPort}" Width="80"/>
+                            <DataGridTextColumn Header="Active LAN" Binding="{Binding ActiveLanPort}" Width="*"/>
+                            <DataGridTextColumn Header="Switch Count" Binding="{Binding SwitchCount}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- IPA Card Redundancy Switch Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasIpaCards}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="IPA Redundancy Switch Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastIpaCardMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding IpaCardEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Slot" Binding="{Binding SlotNumber}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Switch Enabled" Binding="{Binding SwitchEnabled}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
             <!-- GPIO -->
             <Border Classes="card">
                 <StackPanel Spacing="12">
@@ -68,6 +210,27 @@
                         <Button Content="GPIO/SFO Status" Command="{Binding RequestGpioSfoStatusCommand}" 
                                 Classes="primary" Margin="4"/>
                     </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- GPIO/SFO Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasGpioSfoPins}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="GPIO/SFO Pin Status" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastGpioSfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding GpioSfoPins}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Pin #" Binding="{Binding PinNumber}" Width="70"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding PinType}" Width="*"/>
+                            <DataGridCheckBoxColumn Header="On" Binding="{Binding IsOn}" Width="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </StackPanel>
             </Border>
         </StackPanel>

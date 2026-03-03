@@ -26,4 +26,11 @@
     <None Remove="HCIExplorer\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="EclipseHXSNMP\**" />
+    <Content Remove="EclipseHXSNMP\**" />
+    <EmbeddedResource Remove="EclipseHXSNMP\**" />
+    <None Remove="EclipseHXSNMP\**" />
+  </ItemGroup>
+
 </Project>

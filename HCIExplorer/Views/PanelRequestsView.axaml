@@ -6,7 +6,11 @@
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
              x:Class="HCIExplorer.Views.PanelRequestsView"
              x:DataType="vm:PanelRequestsViewModel">
-    
+
+    <UserControl.Styles>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </UserControl.Styles>
+
     <ScrollViewer>
         <StackPanel Spacing="16" Margin="16">
             <TextBlock Text="Panel Requests" Classes="header"/>
@@ -48,7 +52,63 @@
                     </WrapPanel>
                 </StackPanel>
             </Border>
-            
+
+            <!-- Panel Status Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPanelStatuses}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Panel Status Results" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPanelStatusMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PanelStatuses}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Panel #" Binding="{Binding PanelNumber}" Width="80"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding PanelType}" Width="*"/>
+                            <DataGridTextColumn Header="State" Binding="{Binding State}" Width="*"/>
+                            <DataGridCheckBoxColumn Header="AoIP" Binding="{Binding IsAoipDevice}" Width="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Panel Discovery Result -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPanelDiscovery}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Panel Discovery" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPanelDiscoveryMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                </StackPanel>
+            </Border>
+
+            <!-- IP Panel List Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasIPPanelList}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="IP Panel List" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastIPPanelListMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding IpPanelEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="100"/>
+                            <DataGridTextColumn Header="Panel IP" Binding="{Binding PanelIPAddress}" Width="120"/>
+                            <DataGridTextColumn Header="Server IP" Binding="{Binding ServerIPAddress}" Width="120"/>
+                            <DataGridTextColumn Header="Server Port" Binding="{Binding ServerPort}" Width="80"/>
+                            <DataGridTextColumn Header="MAC" Binding="{Binding MACAddressString}" Width="130"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="80"/>
+                            <DataGridTextColumn Header="Login Status" Binding="{Binding LoginStatus}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
             <!-- Key Requests -->
             <Border Classes="card">
                 <StackPanel Spacing="12">
