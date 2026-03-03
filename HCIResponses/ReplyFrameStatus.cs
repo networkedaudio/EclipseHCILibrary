@@ -20,9 +20,9 @@ public class ReplyFrameStatus
     public FramePsuStatus PsuStatus { get; set; }
 
     /// <summary>
-    /// Signed temperature measured at the CPU card in degrees Celsius.
+    /// Temperature measured at the CPU card in degrees Celsius (0.5° resolution).
     /// </summary>
-    public short CpuCardTemperature { get; set; }
+    public double CpuCardTemperature { get; set; }
 
     /// <summary>
     /// Gets whether external PSU 1 has failed.
@@ -77,38 +77,37 @@ public class ReplyFrameStatus
     /// <summary>
     /// Decodes a Reply Frame Status message from the payload.
     /// </summary>
-    /// <param name="payload">The message payload (after flags).</param>
+    /// <param name="payload">The message payload (after flags and protocol schema).</param>
     /// <returns>The decoded reply.</returns>
     public static ReplyFrameStatus Decode(byte[] payload)
     {
         var reply = new ReplyFrameStatus();
 
-        if (payload == null || payload.Length < 9)
+        if (payload == null || payload.Length < 4)
             return reply;
+
+        System.Diagnostics.Debug.WriteLine($"ReplyFrameStatus payload ({payload.Length} bytes): {BitConverter.ToString(payload)}");
 
         int offset = 0;
 
-        // Protocol Tag: 4 bytes (0xABBACEDE) - skip validation, already checked
-        offset += 4;
-
-        // Protocol Schema: 1 byte
-        if (offset < payload.Length)
-            reply.ProtocolSchema = payload[offset++];
-
         // PSU Status: 2 bytes (big-endian)
-        if (offset + 2 <= payload.Length)
-        {
-            ushort psuStatusValue = (ushort)((payload[offset] << 8) | payload[offset + 1]);
-            reply.PsuStatus = (FramePsuStatus)psuStatusValue;
-            offset += 2;
-        }
+        ushort psuStatusValue = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+        reply.PsuStatus = (FramePsuStatus)psuStatusValue;
+        offset += 2;
 
-        // CPU Card Temperature: 2 bytes (big-endian, signed)
-        if (offset + 2 <= payload.Length)
-        {
-            reply.CpuCardTemperature = (short)((payload[offset] << 8) | payload[offset + 1]);
-            offset += 2;
-        }
+        // CPU Card Temperature: 2 bytes (big-endian, fixed-point with 0.5° resolution)
+        // Upper byte = signed integer degrees, lower byte bit 7 = 0.5° fractional part
+        ushort rawTemp = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+
+        double fractional = (rawTemp & 0x0080) != 0 ? 0.5 : 0.0;
+
+        int integerPart = rawTemp >> 8;
+
+        // Sign-extend if bit 7 of the integer part is set (negative temperature)
+        if ((integerPart & 0x80) != 0)
+            integerPart |= unchecked((int)0xFFFFFF00);
+
+        reply.CpuCardTemperature = integerPart + fractional;
 
         return reply;
     }

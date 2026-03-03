@@ -91,6 +91,7 @@ public class EclipseHxSnmpAgent : IDisposable
             try
             {
                 var result = await _listener!.ReceiveAsync(ct);
+                System.Diagnostics.Debug.WriteLine($"SNMP request received from {result.RemoteEndPoint} ({result.Buffer.Length} bytes)");
                 _ = Task.Run(() => HandleRequest(result.Buffer, result.RemoteEndPoint), ct);
             }
             catch (OperationCanceledException)
@@ -103,6 +104,7 @@ public class EclipseHxSnmpAgent : IDisposable
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"SNMP listen error: {ex.Message}");
                 ErrorOccurred?.Invoke(this, ex);
             }
         }

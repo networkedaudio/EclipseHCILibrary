@@ -6,6 +6,7 @@ using HCILibrary.HCIResponses;
 using HCILibrary.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
 
 namespace EclipseHXSNMP.Services;
 
@@ -38,6 +39,16 @@ public class HciPollingService : BackgroundService
     {
         _logger.LogInformation("HCI Polling Service starting");
 
+        try
+        {
+            _snmpAgent.Start();
+            _logger.LogInformation("SNMP agent listening on UDP port {Port}", 161);
+        }
+        catch (SocketException ex)
+        {
+            _logger.LogError(ex, "Failed to start SNMP agent — port may require elevation or is already in use");
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -60,8 +71,18 @@ public class HciPollingService : BackgroundService
             .Where(m => m.Enabled)
             .ToList();
 
-        foreach (var matrix in matrices)
+        if (matrices.Count == 0)
         {
+            _logger.LogWarning("Polling cycle: {Total} matrices configured but {Enabled} enabled — nothing to poll",
+                _configService.Configuration.Matrices.Count, matrices.Count);   
+            return;
+        }
+
+        _logger.LogInformation("Polling cycle: {Enabled} of {Total} matrices enabled",
+            matrices.Count, _configService.Configuration.Matrices.Count);
+
+        foreach (var matrix in matrices)
+        {       
             if (ct.IsCancellationRequested) break;
 
             try
@@ -161,7 +182,7 @@ public class HciPollingService : BackgroundService
             {
                 _matrixStatus.UpdatePsuStatus(new SnmpPsuStatus
                 {
-                    CpuTemperature = frameStatus.CpuCardTemperature,
+                    CpuTemperature = (short)frameStatus.CpuCardTemperature,
                     ExtPsu1Failed = frameStatus.IsExtPsu1Failed,
                     ExtPsu2Failed = frameStatus.IsExtPsu2Failed,
                     IntPsu1Failed = frameStatus.IsIntPsu1Failed,
