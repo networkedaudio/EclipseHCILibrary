@@ -102,6 +102,32 @@
                 </StackPanel>
             </Border>
 
+            <!-- Peripheral Info Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPeripheralInfo}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Peripheral Info Results" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPeripheralInfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PeripheralInfoEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Slot" Binding="{Binding SlotNumber}" Width="60"/>
+                            <DataGridTextColumn Header="Port" Binding="{Binding PortNumber}" Width="60"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Online" Binding="{Binding IsOnline}" Width="55"/>
+                            <DataGridTextColumn Header="Label" Binding="{Binding TalkListenLabel}" Width="*"/>
+                            <DataGridTextColumn Header="Alias" Binding="{Binding TalkListenAlias}" Width="*"/>
+                            <DataGridTextColumn Header="Keys" Binding="{Binding NumberOfKeys}" Width="50"/>
+                            <DataGridTextColumn Header="PMID" Binding="{Binding Pmid}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
             <!-- EHX Control Card Results -->
             <Border Classes="card"
                     IsVisible="{Binding HasEhxCards}">

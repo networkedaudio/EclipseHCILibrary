@@ -14,9 +14,11 @@
     &nbsp;|&nbsp;
     <strong>Ports:</strong> @MatrixStatus.GetPortsSnapshot().Count
     &nbsp;|&nbsp;
-    <strong>Last card update:</strong> @(MatrixStatus.LastCardUpdate?.ToString("HH:mm:ss") ?? "never")
+    <strong>Transceivers:</strong> @MatrixStatus.GetTransceiversSnapshot().Count
     &nbsp;|&nbsp;
-    <strong>Last PSU update:</strong> @(MatrixStatus.LastPsuUpdate?.ToString("HH:mm:ss") ?? "never")
+    <strong>Beltpacks:</strong> @MatrixStatus.GetBeltpacksSnapshot().Count
+    &nbsp;|&nbsp;
+    <strong>Last peripheral update:</strong> @(MatrixStatus.LastPeripheralUpdate?.ToString("HH:mm:ss") ?? "never")
 </div>
 
 <div class="browser-toolbar">

@@ -24,6 +24,16 @@ public class EclipseHxMatrixStatus
     public SnmpPsuStatus PsuStatus { get; private set; } = new();
 
     /// <summary>
+    /// The current transceiver (antenna/splitter) list.
+    /// </summary>
+    public List<SnmpTransceiverEntry> Transceivers { get; private set; } = new();
+
+    /// <summary>
+    /// The current beltpack list.
+    /// </summary>
+    public List<SnmpBeltpackEntry> Beltpacks { get; private set; } = new();
+
+    /// <summary>
     /// Timestamp of the last card status update.
     /// </summary>
     public DateTime? LastCardUpdate { get; private set; }
@@ -37,6 +47,11 @@ public class EclipseHxMatrixStatus
     /// Timestamp of the last PSU status update.
     /// </summary>
     public DateTime? LastPsuUpdate { get; private set; }
+
+    /// <summary>
+    /// Timestamp of the last peripheral (transceiver/beltpack) update.
+    /// </summary>
+    public DateTime? LastPeripheralUpdate { get; private set; }
 
     /// <summary>
     /// Updates the card status list from HCI reply data.
@@ -113,6 +128,56 @@ public class EclipseHxMatrixStatus
         lock (_lock)
         {
             return PsuStatus;
+        }
+    }
+
+    /// <summary>
+    /// Updates the transceiver list from peripheral info data.
+    /// Thread-safe.
+    /// </summary>
+    public void UpdateTransceivers(IEnumerable<SnmpTransceiverEntry> transceivers)
+    {
+        lock (_lock)
+        {
+            Transceivers = new List<SnmpTransceiverEntry>(transceivers);
+            LastPeripheralUpdate = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Updates the beltpack list from peripheral info data.
+    /// Thread-safe.
+    /// </summary>
+    public void UpdateBeltpacks(IEnumerable<SnmpBeltpackEntry> beltpacks)
+    {
+        lock (_lock)
+        {
+            Beltpacks = new List<SnmpBeltpackEntry>(beltpacks);
+            LastPeripheralUpdate = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Gets a snapshot of the current transceiver list.
+    /// Thread-safe.
+    /// </summary>
+    public List<SnmpTransceiverEntry> GetTransceiversSnapshot()
+    {
+        lock (_lock)
+        {
+            return new List<SnmpTransceiverEntry>(Transceivers);
+        }
+    }
+
+    /// <summary>
+    /// Gets a snapshot of the current beltpack list.
+    /// Thread-safe.
+    /// </summary>
+    public List<SnmpBeltpackEntry> GetBeltpacksSnapshot()
+    {
+        lock (_lock)
+        {
+            return new List<SnmpBeltpackEntry>(Beltpacks);
         }
     }
 }

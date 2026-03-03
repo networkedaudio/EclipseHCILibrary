@@ -21,10 +21,12 @@ eclipseHxMIB MODULE-IDENTITY
     ::= { enterprises 99999 }
 
 -- Top-level nodes
-eclipseHx       OBJECT IDENTIFIER ::= { eclipseHxMIB 1 }
-eclipseCards    OBJECT IDENTIFIER ::= { eclipseHx 1 }
-eclipsePorts    OBJECT IDENTIFIER ::= { eclipseHx 2 }
-eclipsePsu      OBJECT IDENTIFIER ::= { eclipseHx 3 }
+eclipseHx            OBJECT IDENTIFIER ::= { eclipseHxMIB 1 }
+eclipseCards         OBJECT IDENTIFIER ::= { eclipseHx 1 }
+eclipsePorts         OBJECT IDENTIFIER ::= { eclipseHx 2 }
+eclipsePsu           OBJECT IDENTIFIER ::= { eclipseHx 3 }
+eclipseTransceivers  OBJECT IDENTIFIER ::= { eclipseHx 4 }
+eclipseBeltpacks     OBJECT IDENTIFIER ::= { eclipseHx 5 }
 
 -- ============================================================
 -- Card Table
@@ -244,5 +246,239 @@ psuHasAnyAlarm OBJECT-TYPE
     STATUS      current
     DESCRIPTION "Whether any alarm condition is active."
     ::= { eclipsePsu 11 }
+
+-- ============================================================
+-- Transceiver Table (FreeSpeak II Antennas/Splitters)
+-- ============================================================
+
+transceiverCount OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Total number of transceivers (antennas/splitters)."
+    ::= { eclipseTransceivers 1 }
+
+transceiverTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF TransceiverEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Table of transceiver status entries."
+    ::= { eclipseTransceivers 2 }
+
+transceiverEntry OBJECT-TYPE
+    SYNTAX      TransceiverEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "A single transceiver status entry."
+    INDEX       { transceiverIndex }
+    ::= { transceiverTable 1 }
+
+TransceiverEntry ::= SEQUENCE {
+    transceiverIndex            Integer32,
+    transceiverSlot             Integer32,
+    transceiverPort             Integer32,
+    transceiverPanelType        Integer32,
+    transceiverIsOnline         TruthValue,
+    transceiverLabel            DisplayString,
+    transceiverKeys             Integer32,
+    transceiverExpansionPanels  Integer32,
+    transceiverFirmware         DisplayString
+}
+
+transceiverIndex OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "1-based index of this transceiver entry."
+    ::= { transceiverEntry 1 }
+
+transceiverSlot OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Physical slot number of the transceiver card."
+    ::= { transceiverEntry 2 }
+
+transceiverPort OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Port or role number."
+    ::= { transceiverEntry 3 }
+
+transceiverPanelType OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Panel type identifier."
+    ::= { transceiverEntry 4 }
+
+transceiverIsOnline OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Whether the transceiver is online."
+    ::= { transceiverEntry 5 }
+
+transceiverLabel OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..20))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Talk and listen label."
+    ::= { transceiverEntry 6 }
+
+transceiverKeys OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Number of keys on the transceiver."
+    ::= { transceiverEntry 7 }
+
+transceiverExpansionPanels OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Number of expansion panels connected."
+    ::= { transceiverEntry 8 }
+
+transceiverFirmware OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..64))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Firmware version string."
+    ::= { transceiverEntry 9 }
+
+-- ============================================================
+-- Beltpack Table (FreeSpeak II Beltpacks)
+-- ============================================================
+
+beltpackCount OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Total number of beltpacks."
+    ::= { eclipseBeltpacks 1 }
+
+beltpackTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF BeltpackEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Table of beltpack status entries."
+    ::= { eclipseBeltpacks 2 }
+
+beltpackEntry OBJECT-TYPE
+    SYNTAX      BeltpackEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "A single beltpack status entry."
+    INDEX       { beltpackIndex }
+    ::= { beltpackTable 1 }
+
+BeltpackEntry ::= SEQUENCE {
+    beltpackIndex       Integer32,
+    beltpackPmid        Integer32,
+    beltpackPort        Integer32,
+    beltpackPanelType   Integer32,
+    beltpackIsOnline    TruthValue,
+    beltpackLabel       DisplayString,
+    beltpackAlias       DisplayString,
+    beltpackKeys        Integer32,
+    beltpackFirmware    DisplayString,
+    beltpackFrequency   DisplayString,
+    beltpackWirelessMode DisplayString,
+    beltpackRoleNumber  Integer32,
+    beltpackAntennaPort Integer32
+}
+
+beltpackIndex OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "1-based index of this beltpack entry."
+    ::= { beltpackEntry 1 }
+
+beltpackPmid OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Beltpack unique identifier (PMID)."
+    ::= { beltpackEntry 2 }
+
+beltpackPort OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Port or role number."
+    ::= { beltpackEntry 3 }
+
+beltpackPanelType OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Panel type identifier."
+    ::= { beltpackEntry 4 }
+
+beltpackIsOnline OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Whether the beltpack is online."
+    ::= { beltpackEntry 5 }
+
+beltpackLabel OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..20))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Talk and listen label."
+    ::= { beltpackEntry 6 }
+
+beltpackAlias OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..20))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Talk and listen alias."
+    ::= { beltpackEntry 7 }
+
+beltpackKeys OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Number of keys on the beltpack."
+    ::= { beltpackEntry 8 }
+
+beltpackFirmware OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..64))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Firmware version string."
+    ::= { beltpackEntry 9 }
+
+beltpackFrequency OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..16))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Frequency type (1.9 GHz, 2.4 GHz, Not Set)."
+    ::= { beltpackEntry 10 }
+
+beltpackWirelessMode OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..8))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Wireless mode (FS1, FS2)."
+    ::= { beltpackEntry 11 }
+
+beltpackRoleNumber OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Role number currently in use by this beltpack."
+    ::= { beltpackEntry 12 }
+
+beltpackAntennaPort OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Antenna port the beltpack is connected to."
+    ::= { beltpackEntry 13 }
 
 END

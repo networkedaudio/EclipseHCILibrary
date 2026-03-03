@@ -196,6 +196,14 @@ public class SnmpBrowserService
             EclipseHxOids.PsuExtAlarmActive => "psuExtAlarmActive",
             EclipseHxOids.PsuOvertemp => "psuOvertemp",
             EclipseHxOids.PsuHasAnyAlarm => "psuHasAnyAlarm",
+            EclipseHxOids.Transceivers => "eclipseTransceivers",
+            EclipseHxOids.TransceiverCount => "transceiverCount",
+            EclipseHxOids.TransceiverTable => "transceiverTable",
+            EclipseHxOids.TransceiverEntry => "transceiverEntry",
+            EclipseHxOids.Beltpacks => "eclipseBeltpacks",
+            EclipseHxOids.BeltpackCount => "beltpackCount",
+            EclipseHxOids.BeltpackTable => "beltpackTable",
+            EclipseHxOids.BeltpackEntry => "beltpackEntry",
             _ => oid[(oid.LastIndexOf('.') + 1)..]
         };
     }

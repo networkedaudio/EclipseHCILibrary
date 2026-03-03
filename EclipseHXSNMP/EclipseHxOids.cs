@@ -53,6 +53,44 @@ public static class EclipseHxOids
     public const string PsuOvertemp = Psu + ".10.0";
     public const string PsuHasAnyAlarm = Psu + ".11.0";
 
+    // -- Transceivers branch: .4
+    public const string Transceivers = Base + ".4";
+    public const string TransceiverCount = Transceivers + ".1.0";
+    public const string TransceiverTable = Transceivers + ".2";
+    public const string TransceiverEntry = TransceiverTable + ".1";
+
+    // Transceiver entry columns
+    public const string TransceiverIndex = TransceiverEntry + ".1";
+    public const string TransceiverSlot = TransceiverEntry + ".2";
+    public const string TransceiverPort = TransceiverEntry + ".3";
+    public const string TransceiverPanelType = TransceiverEntry + ".4";
+    public const string TransceiverIsOnline = TransceiverEntry + ".5";
+    public const string TransceiverLabel = TransceiverEntry + ".6";
+    public const string TransceiverKeys = TransceiverEntry + ".7";
+    public const string TransceiverExpansionPanels = TransceiverEntry + ".8";
+    public const string TransceiverFirmware = TransceiverEntry + ".9";
+
+    // -- Beltpacks branch: .5
+    public const string Beltpacks = Base + ".5";
+    public const string BeltpackCount = Beltpacks + ".1.0";
+    public const string BeltpackTable = Beltpacks + ".2";
+    public const string BeltpackEntry = BeltpackTable + ".1";
+
+    // Beltpack entry columns
+    public const string BeltpackIndex = BeltpackEntry + ".1";
+    public const string BeltpackPmid = BeltpackEntry + ".2";
+    public const string BeltpackPort = BeltpackEntry + ".3";
+    public const string BeltpackPanelType = BeltpackEntry + ".4";
+    public const string BeltpackIsOnline = BeltpackEntry + ".5";
+    public const string BeltpackLabel = BeltpackEntry + ".6";
+    public const string BeltpackAlias = BeltpackEntry + ".7";
+    public const string BeltpackKeys = BeltpackEntry + ".8";
+    public const string BeltpackFirmware = BeltpackEntry + ".9";
+    public const string BeltpackFrequency = BeltpackEntry + ".10";
+    public const string BeltpackWirelessMode = BeltpackEntry + ".11";
+    public const string BeltpackRoleNumber = BeltpackEntry + ".12";
+    public const string BeltpackAntennaPort = BeltpackEntry + ".13";
+
     /// <summary>
     /// Creates an ObjectIdentifier from a dotted-string OID.
     /// </summary>

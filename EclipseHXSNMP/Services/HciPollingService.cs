@@ -2,6 +2,7 @@ using EclipseHXSNMP.Models;
 using HCILibrary;
 using HCILibrary.Enums;
 using HCILibrary.HCIRequests;
+using HCILibrary.HCIResponses;
 using HCILibrary.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -129,6 +130,10 @@ public class HciPollingService : BackgroundService
         var panelRequest = new RequestPanelStatusRequest();
         connection.RequestQueue.Enqueue(panelRequest);
 
+        // Request Peripheral Info (transceivers + beltpacks) — slot 0xFF = wireless devices
+        var peripheralRequest = new RequestPeripheralInfoRequest(RequestPeripheralInfoRequest.WirelessDeviceSlot);
+        connection.RequestQueue.Enqueue(peripheralRequest);
+
         // Allow time for responses to arrive
         await Task.Delay(3000, ct);
     }
@@ -183,6 +188,104 @@ public class HciPollingService : BackgroundService
 
                 _matrixStatus.UpdatePorts(entries);
                 _logger.LogDebug("Updated {Count} ports", entries.Count);
+            }
+
+            if (reply.PeripheralInfo is { } peripheralInfo)
+            {
+                // Split peripheral entries into transceivers (have a slot) and beltpacks (no slot / have PMID)
+                int txIndex = 1;
+                int bpIndex = 1;
+                var transceivers = new List<SnmpTransceiverEntry>();
+                var beltpacks = new List<SnmpBeltpackEntry>();
+
+                foreach (var entry in peripheralInfo.Entries)
+                {
+                    string firmware = entry.Versions.Count > 0 ? entry.Versions[0].ToString() : string.Empty;
+
+                    if (entry.HasNoSlot || entry.Pmid != 0)
+                    {
+                        // Beltpack: no physical slot or has a PMID
+                        beltpacks.Add(new SnmpBeltpackEntry
+                        {
+                            Index = bpIndex++,
+                            Pmid = entry.Pmid,
+                            PortNumber = entry.PortNumber,
+                            PanelType = entry.PanelType,
+                            IsOnline = entry.IsOnline,
+                            Label = entry.TalkListenLabel,
+                            Alias = entry.TalkListenAlias,
+                            NumberOfKeys = entry.NumberOfKeys,
+                            FirmwareVersion = firmware
+                        });
+                    }
+                    else
+                    {
+                        // Transceiver: has a physical slot
+                        transceivers.Add(new SnmpTransceiverEntry
+                        {
+                            Index = txIndex++,
+                            SlotNumber = entry.SlotNumber,
+                            PortNumber = entry.PortNumber,
+                            PanelType = entry.PanelType,
+                            IsOnline = entry.IsOnline,
+                            Label = entry.TalkListenLabel,
+                            NumberOfKeys = entry.NumberOfKeys,
+                            ExpansionPanels = entry.NumberOfExpansionPanels,
+                            FirmwareVersion = firmware
+                        });
+                    }
+                }
+
+                _matrixStatus.UpdateTransceivers(transceivers);
+                _matrixStatus.UpdateBeltpacks(beltpacks);
+                _logger.LogDebug("Updated {TxCount} transceivers, {BpCount} beltpacks",
+                    transceivers.Count, beltpacks.Count);
+            }
+
+            if (reply.BeltpackStatus is { } beltpackStatus)
+            {
+                // Merge live beltpack status into existing beltpack entries by PMID.
+                // If a PMID doesn't exist yet (no PeripheralInfo received), create a new entry.
+                var existing = _matrixStatus.GetBeltpacksSnapshot();
+                var byPmid = existing.ToDictionary(b => b.Pmid);
+
+                foreach (var entry in beltpackStatus.Entries)
+                {
+                    if (byPmid.TryGetValue(entry.Pmid, out var bp))
+                    {
+                        // Update live fields on existing entry
+                        bp.IsOnline = entry.IsOnline;
+                        bp.Frequency = entry.FrequencyDescription;
+                        bp.WirelessMode = entry.WirelessMode.ToString();
+                        bp.RoleNumber = entry.RoleNumber;
+                        bp.AntennaPort = entry.AntennaPort;
+                    }
+                    else
+                    {
+                        // New beltpack not yet seen via PeripheralInfo
+                        byPmid[entry.Pmid] = new SnmpBeltpackEntry
+                        {
+                            Pmid = entry.Pmid,
+                            PortNumber = entry.RoleNumber,
+                            IsOnline = entry.IsOnline,
+                            Frequency = entry.FrequencyDescription,
+                            WirelessMode = entry.WirelessMode.ToString(),
+                            RoleNumber = entry.RoleNumber,
+                            AntennaPort = entry.AntennaPort
+                        };
+                    }
+                }
+
+                // Re-index and update
+                var merged = byPmid.Values.Select((b, i) =>
+                {
+                    b.Index = i + 1;
+                    return b;
+                }).ToList();
+
+                _matrixStatus.UpdateBeltpacks(merged);
+                _logger.LogDebug("Merged beltpack status: {Count} live entries, {Total} total",
+                    beltpackStatus.Entries.Count, merged.Count);
             }
         }
         catch (Exception ex)

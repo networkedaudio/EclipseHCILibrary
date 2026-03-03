@@ -30,6 +30,8 @@ public class EclipseHxSnmpObjectStore
         var psu = _status.GetPsuSnapshot();
         var cards = _status.GetCardsSnapshot();
         var ports = _status.GetPortsSnapshot();
+        var transceivers = _status.GetTransceiversSnapshot();
+        var beltpacks = _status.GetBeltpacksSnapshot();
 
         // -- Card scalars
         AddVar(vars, EclipseHxOids.CardCount, new Integer32(cards.Count));
@@ -71,6 +73,46 @@ public class EclipseHxSnmpObjectStore
         AddVar(vars, EclipseHxOids.PsuExtAlarmActive, BoolToSnmp(psu.ExtAlarmActive));
         AddVar(vars, EclipseHxOids.PsuOvertemp, BoolToSnmp(psu.Overtemp));
         AddVar(vars, EclipseHxOids.PsuHasAnyAlarm, BoolToSnmp(psu.HasAnyAlarm));
+
+        // -- Transceiver scalars
+        AddVar(vars, EclipseHxOids.TransceiverCount, new Integer32(transceivers.Count));
+
+        // -- Transceiver table rows
+        foreach (var tx in transceivers)
+        {
+            string row = $".{tx.Index}";
+            AddVar(vars, EclipseHxOids.TransceiverIndex + row, new Integer32(tx.Index));
+            AddVar(vars, EclipseHxOids.TransceiverSlot + row, new Integer32(tx.SlotNumber));
+            AddVar(vars, EclipseHxOids.TransceiverPort + row, new Integer32(tx.PortNumber));
+            AddVar(vars, EclipseHxOids.TransceiverPanelType + row, new Integer32(tx.PanelType));
+            AddVar(vars, EclipseHxOids.TransceiverIsOnline + row, BoolToSnmp(tx.IsOnline));
+            AddVar(vars, EclipseHxOids.TransceiverLabel + row, new OctetString(tx.Label));
+            AddVar(vars, EclipseHxOids.TransceiverKeys + row, new Integer32(tx.NumberOfKeys));
+            AddVar(vars, EclipseHxOids.TransceiverExpansionPanels + row, new Integer32(tx.ExpansionPanels));
+            AddVar(vars, EclipseHxOids.TransceiverFirmware + row, new OctetString(tx.FirmwareVersion));
+        }
+
+        // -- Beltpack scalars
+        AddVar(vars, EclipseHxOids.BeltpackCount, new Integer32(beltpacks.Count));
+
+        // -- Beltpack table rows
+        foreach (var bp in beltpacks)
+        {
+            string row = $".{bp.Index}";
+            AddVar(vars, EclipseHxOids.BeltpackIndex + row, new Integer32(bp.Index));
+            AddVar(vars, EclipseHxOids.BeltpackPmid + row, new Integer32((int)bp.Pmid));
+            AddVar(vars, EclipseHxOids.BeltpackPort + row, new Integer32(bp.PortNumber));
+            AddVar(vars, EclipseHxOids.BeltpackPanelType + row, new Integer32(bp.PanelType));
+            AddVar(vars, EclipseHxOids.BeltpackIsOnline + row, BoolToSnmp(bp.IsOnline));
+            AddVar(vars, EclipseHxOids.BeltpackLabel + row, new OctetString(bp.Label));
+            AddVar(vars, EclipseHxOids.BeltpackAlias + row, new OctetString(bp.Alias));
+            AddVar(vars, EclipseHxOids.BeltpackKeys + row, new Integer32(bp.NumberOfKeys));
+            AddVar(vars, EclipseHxOids.BeltpackFirmware + row, new OctetString(bp.FirmwareVersion));
+            AddVar(vars, EclipseHxOids.BeltpackFrequency + row, new OctetString(bp.Frequency));
+            AddVar(vars, EclipseHxOids.BeltpackWirelessMode + row, new OctetString(bp.WirelessMode));
+            AddVar(vars, EclipseHxOids.BeltpackRoleNumber + row, new Integer32(bp.RoleNumber));
+            AddVar(vars, EclipseHxOids.BeltpackAntennaPort + row, new Integer32(bp.AntennaPort));
+        }
 
         lock (_lock)
         {

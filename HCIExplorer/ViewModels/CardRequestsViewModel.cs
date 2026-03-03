@@ -41,6 +41,15 @@ public partial class CardRequestsViewModel : ViewModelBase
     private bool _hasPortInfo;
 
     [ObservableProperty]
+    private ObservableCollection<PeripheralInfoEntry> _peripheralInfoEntries = new();
+
+    [ObservableProperty]
+    private string _lastPeripheralInfoMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasPeripheralInfo;
+
+    [ObservableProperty]
     private ObservableCollection<EhxControlCardInfo> _ehxCardEntries = new();
 
     [ObservableProperty]
@@ -122,6 +131,20 @@ public partial class CardRequestsViewModel : ViewModelBase
 
                 LogService.Instance.LogDebug(
                     $"Port Info: Slot={portInfo.SlotNumber}, {portInfo.NumberPorts} ports");
+            }
+
+            if (reply.PeripheralInfo is { } peripheralInfo)
+            {
+                PeripheralInfoEntries.Clear();
+                foreach (var entry in peripheralInfo.Entries)
+                {
+                    PeripheralInfoEntries.Add(entry);
+                }
+                HasPeripheralInfo = PeripheralInfoEntries.Count > 0;
+                LastPeripheralInfoMessage = $"Slot {peripheralInfo.RequestedSlotNumber}: {peripheralInfo.Count} peripheral(s) at {DateTime.Now:HH:mm:ss}";
+
+                LogService.Instance.LogDebug(
+                    $"Peripheral Info: Slot={peripheralInfo.RequestedSlotNumber}, {peripheralInfo.Count} entries");
             }
 
             if (reply.EhxControlCardStatus is { } ehxStatus)

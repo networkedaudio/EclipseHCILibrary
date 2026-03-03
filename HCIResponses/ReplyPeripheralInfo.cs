@@ -1,4 +1,4 @@
-using System.Text;
+    using System.Text;
 using HCILibrary.Enums;
 
 namespace HCILibrary.HCIResponses;
@@ -186,18 +186,21 @@ public class ReplyPeripheralInfo
     /// <summary>
     /// Parses a Reply Peripheral Info response from the payload bytes.
     /// </summary>
-    /// <param name="payload">The payload bytes (after flags, starting at protocol schema).</param>
+    /// <param name="payload">The payload bytes (starting at protocol tag).</param>
     /// <returns>The parsed response, or null if parsing fails.</returns>
     public static ReplyPeripheralInfo? Parse(byte[] payload)
     {
-        // Minimum payload: ProtocolSchema(1) + SubType(1) + SlotNumber(1) + Count(2) = 5 bytes
-        if (payload == null || payload.Length < 5)
+        // Minimum payload: ProtocolTag(4) + ProtocolSchema(1) + SubType(1) + SlotNumber(1) + Count(2) = 9 bytes
+        if (payload == null || payload.Length < 9)
         {
             return null;
         }
 
         int offset = 0;
         var result = new ReplyPeripheralInfo();
+
+        // Protocol Tag (4 bytes, 0xABBACEDE) - skip, already validated
+        offset += 4;
 
         // Protocol Schema (1 byte)
         result.ProtocolSchema = payload[offset++];
@@ -237,9 +240,7 @@ public class ReplyPeripheralInfo
         // TalkListenLabel(20) + TalkListenAlias(20) + NumberOfKeys(1) +
         // AnswerbackTimeout(1) + NumberOfExpansionPanels(1) + FirstExpansionPanelRegion(1) +
         // PMID(4) + NumberOfVersionStrings(1) = 56 bytes minimum
-        const int minEntrySize = 56;
-
-        if (payload.Length < offset + minEntrySize)
+        if (payload.Length < offset + 56)
         {
             return null;
         }

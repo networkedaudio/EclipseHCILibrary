@@ -433,6 +433,10 @@ public static class HCIResponse
                 DecodeReplyBeltpackDelete(reply);
                 break;
 
+            case HCIMessageID.ReplyPeripheralInfo:
+                DecodeReplyPeripheralInfo(reply);
+                break;
+
             // Additional HCIv2 message handlers will be added here
             default:
                 // Default handler for unimplemented message types
@@ -1115,5 +1119,14 @@ public static class HCIResponse
     private static void DecodeReplyBeltpackDelete(HCIReply reply)
     {
         reply.BeltpackDelete = ReplyBeltpackDelete.Decode(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply Peripheral Info message (Message ID 0x007B, Sub Type 0x15) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the peripheral info payload.</param>
+    private static void DecodeReplyPeripheralInfo(HCIReply reply)
+    {
+        reply.PeripheralInfo = ReplyPeripheralInfo.Parse(reply.Payload);
     }
 }

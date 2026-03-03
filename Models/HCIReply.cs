@@ -159,6 +159,12 @@ public class HCIReply
     public ReplyCardInfo? CardInfo { get; set; }
 
     /// <summary>
+    /// Parsed peripheral info for Reply Peripheral Info messages (Message ID 0x007B, Sub Type 0x15).
+    /// Null if this is not a Reply Peripheral Info message.
+    /// </summary>
+    public ReplyPeripheralInfo? PeripheralInfo { get; set; }
+
+    /// <summary>
     /// Parsed conference assignments for Reply Conference Assignments messages (Message ID 0x00C6).
     /// Null if this is not a Reply Conference Assignments message.
     /// </summary>
