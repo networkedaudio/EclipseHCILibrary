@@ -30,17 +30,11 @@ public class ReplyPanelDiscovery
     {
         var reply = new ReplyPanelDiscovery();
 
-        if (payload == null || payload.Length < 6)
+        if (payload == null || payload.Length < 3)
             return reply;
 
         int offset = 0;
 
-        // Protocol Tag: 4 bytes (0xABBACEDE) - skip validation, already checked
-        offset += 4;
-
-        // Protocol Schema: 1 byte
-        if (offset < payload.Length)
-            reply.ProtocolSchema = payload[offset++];
 
         // Sub ID: 1 byte
         if (offset < payload.Length)
@@ -49,3 +43,4 @@ public class ReplyPanelDiscovery
         return reply;
     }
 }
+

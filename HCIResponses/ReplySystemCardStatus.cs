@@ -82,6 +82,8 @@ public class ReplySystemCardStatus
             return null;
         }
 
+        System.Diagnostics.Debug.WriteLine($"ReplySystemCardStatus payload ({payload.Length} bytes): {BitConverter.ToString(payload)}");
+
         var result = new ReplySystemCardStatus();
 
         // Count: 16 bit word (big-endian)
@@ -95,6 +97,8 @@ public class ReplySystemCardStatus
             result.Cards.Add(CardStatus.Parse(status));
             offset += 2;
         }
+
+        System.Diagnostics.Debug.WriteLine($"ReplySystemCardStatus: {result.Count} cards parsed");
 
         return result;
     }

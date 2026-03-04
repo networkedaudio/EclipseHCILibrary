@@ -5,12 +5,12 @@ namespace HCILibrary.HCIResponses;
 
 /// <summary>
 /// Represents the status of a single panel/endpoint from Reply Panel Status (0x001E).
-/// Compact 4-byte format: PortNumber(2, big-endian) + PanelType(1) + Condition(1).
+/// Compact 4-byte format: PanelNumLSB(1) + PanelType(1) + Condition(1) + PanelNumMSB(1).
 /// </summary>
 public class PanelStatus
 {
     /// <summary>
-    /// Port number (16-bit, big-endian).
+    /// Port number (16-bit, split across bytes 0 and 3 of the entry).
     /// </summary>
     public ushort PanelNumber { get; set; }
 
@@ -35,7 +35,7 @@ public class PanelStatus
 /// Sent in response to Request Panel Status or when panel state changes.
 /// A complete list is generated in response to a request; only changed panels
 /// are reported in automatically generated messages.
-/// Entry format: 4 bytes each — PortNumber(2, big-endian) + PanelType(1) + Condition(1).
+/// Entry format: 4 bytes each — PanelNumLSB(1) + PanelType(1) + Condition(1) + PanelNumMSB(1).
 /// </summary>
 public class ReplyPanelStatus
 {
@@ -77,15 +77,19 @@ public class ReplyPanelStatus
                 break;
             }
 
-            // Port Number: 16-bit word (big-endian)
-            ushort panelNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
-            offset += 2;
+            // Panel Num LSB: 1 byte (least significant 8 bits of panel number)
+            byte panelNumLsb = payload[offset++];
 
             // Panel Type: 1 byte
             byte panelType = payload[offset++];
 
             // Condition: 1 byte (bits 0-6 = state, bit 7 = AoIP)
             byte condition = payload[offset++];
+
+            // Panel Num MSB: 1 byte (most significant 8 bits of panel number)
+            byte panelNumMsb = payload[offset++];
+
+            ushort panelNumber = (ushort)((panelNumMsb << 8) | panelNumLsb);
 
             result.Panels.Add(new PanelStatus
             {
