@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HCIExplorer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="HCIExplorer.Views.PortRequestsView"
+             x:DataType="vm:PortRequestsViewModel">
+
+    <UserControl.Styles>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="16">
+            <TextBlock Text="Port Requests" Classes="header"/>
+
+            <!-- Parameters -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Parameters" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Slot:" VerticalAlignment="Center" Foreground="#A8B4BE"/>
+                        <NumericUpDown Value="{Binding Slot}" Minimum="1" Maximum="255" Width="100"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Request Buttons -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Requests" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="Panel Status (All Ports)" Command="{Binding RequestPanelStatusCommand}"
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Port Info (By Slot)" Command="{Binding RequestPortInfoCommand}"
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Peripheral Info (By Slot)" Command="{Binding RequestPeripheralInfoCommand}"
+                                Classes="primary" Margin="4"/>
+                        <Button Content="Wireless Peripherals" Command="{Binding RequestWirelessPeripheralInfoCommand}"
+                                Classes="primary" Margin="4"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Panel Status Results (bulk port listing) -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPanelStatuses}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Panel Status (All Ports)" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPanelStatusMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PanelStatuses}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Port #" Binding="{Binding PanelNumber}" Width="70"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="120"/>
+                            <DataGridTextColumn Header="State" Binding="{Binding State}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="AoIP" Binding="{Binding IsAoipDevice}" Width="55"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Port Info Results (detailed per-slot) -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPortInfo}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Port Info (Detailed)" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPortInfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PortInfoEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Port #" Binding="{Binding PortNumber}" Width="70"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="120"/>
+                            <DataGridCheckBoxColumn Header="Online" Binding="{Binding OperationalStatus.IsOnline}" Width="55"/>
+                            <DataGridTextColumn Header="Port Type" Binding="{Binding OperationalStatus.PortType}" Width="90"/>
+                            <DataGridTextColumn Header="Firmware" Binding="{Binding PanelFirmware}" Width="100"/>
+                            <DataGridTextColumn Header="Kernel" Binding="{Binding KernelVersion}" Width="80"/>
+                            <DataGridTextColumn Header="Boot" Binding="{Binding BootVersion}" Width="80"/>
+                            <DataGridTextColumn Header="Label" Binding="{Binding TalkListenLabel}" Width="*"/>
+                            <DataGridTextColumn Header="Keys" Binding="{Binding NumberOfKeys}" Width="50"/>
+                            <DataGridTextColumn Header="Exp. Panels" Binding="{Binding NumberOfExpansionPanels}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Beltpack Status Results (live state from 0x004C) -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasBeltpackStatuses}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Beltpack Status (Live)" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastBeltpackStatusMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding BeltpackStatuses}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="PMID" Binding="{Binding Pmid, StringFormat='{}{0:X5}'}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Online" Binding="{Binding IsOnline}" Width="55"/>
+                            <DataGridTextColumn Header="Frequency" Binding="{Binding FrequencyDescription}" Width="90"/>
+                            <DataGridTextColumn Header="Mode" Binding="{Binding WirelessMode}" Width="60"/>
+                            <DataGridTextColumn Header="Role" Binding="{Binding RoleNumber}" Width="60"/>
+                            <DataGridTextColumn Header="Antenna Port" Binding="{Binding AntennaPort}" Width="90"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Peripheral Info Results -->
+            <Border Classes="card"
+                    IsVisible="{Binding HasPeripheralInfo}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Peripheral Info" FontWeight="SemiBold" FontSize="14" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding LastPeripheralInfoMessage}" FontSize="12" Foreground="#AAAAAA"/>
+                    <DataGrid ItemsSource="{Binding PeripheralInfoEntries}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              MaxHeight="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Slot" Binding="{Binding SlotNumber}" Width="60"/>
+                            <DataGridTextColumn Header="Port" Binding="{Binding PortNumber}" Width="60"/>
+                            <DataGridTextColumn Header="Panel Type" Binding="{Binding PanelType}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Online" Binding="{Binding IsOnline}" Width="55"/>
+                            <DataGridTextColumn Header="Label" Binding="{Binding TalkListenLabel}" Width="*"/>
+                            <DataGridTextColumn Header="Alias" Binding="{Binding TalkListenAlias}" Width="*"/>
+                            <DataGridTextColumn Header="Keys" Binding="{Binding NumberOfKeys}" Width="50"/>
+                            <DataGridTextColumn Header="PMID" Binding="{Binding Pmid, StringFormat='{}{0:X}'}" Width="80"/>
+                            <DataGridTextColumn Header="Exp. Panels" Binding="{Binding NumberOfExpansionPanels}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

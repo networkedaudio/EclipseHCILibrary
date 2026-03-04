@@ -112,6 +112,9 @@
             <TabItem Header="Cards">
                 <views:CardRequestsView DataContext="{Binding CardRequests}"/>
             </TabItem>
+            <TabItem Header="Ports">
+                <views:PortRequestsView DataContext="{Binding PortRequests}"/>
+            </TabItem>
             <TabItem Header="Beltpacks">
                 <views:BeltpackRequestsView DataContext="{Binding BeltpackRequests}"/>
             </TabItem>

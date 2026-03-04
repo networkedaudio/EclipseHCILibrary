@@ -73,7 +73,10 @@ public partial class MainWindowViewModel : ViewModelBase
     
     [ObservableProperty]
     private CardRequestsViewModel _cardRequests;
-    
+
+    [ObservableProperty]
+    private PortRequestsViewModel _portRequests;
+
     [ObservableProperty]
     private BeltpackRequestsViewModel _beltpackRequests;
     
@@ -107,6 +110,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _conferenceRequests = new ConferenceRequestsViewModel();
         _telephonyRequests = new TelephonyRequestsViewModel();
         _cardRequests = new CardRequestsViewModel();
+        _portRequests = new PortRequestsViewModel();
         _beltpackRequests = new BeltpackRequestsViewModel();
         _miscRequests = new MiscRequestsViewModel();
         
