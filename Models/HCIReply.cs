@@ -450,4 +450,46 @@ public class HCIReply
     /// Null if this is not a Reply Beltpack Delete message.
     /// </summary>
     public ReplyBeltpackDelete? BeltpackDelete { get; set; }
+
+    /// <summary>
+    /// Parsed entity info for Reply Entity Info messages (Message ID 0x00B0).
+    /// Contains entity instance information (Conferences, Groups, IFBs).
+    /// Null if this is not a Reply Entity Info message.
+    /// </summary>
+    public ReplyEntityInfo? EntityInfo { get; set; }
+
+    /// <summary>
+    /// Parsed IFB status for Reply IFB Status messages (Message ID 0x003E).
+    /// Contains IFB attribute information. Also sent unsolicited when attributes are edited.
+    /// Null if this is not a Reply IFB Status message.
+    /// </summary>
+    public ReplyIfbStatus? IfbStatus { get; set; }
+
+    /// <summary>
+    /// Parsed role state for Reply Role State messages (Message ID 0x0185).
+    /// Contains role allocation status for one or more roles.
+    /// Null if this is not a Reply Role State message.
+    /// </summary>
+    public ReplyRoleState? RoleState { get; set; }
+
+    /// <summary>
+    /// Parsed VoIP status for Reply VoIP Status messages (Message ID 0x00F8, Sub ID 0x17).
+    /// Contains VoIP channel status information.
+    /// Null if this is not a Reply VoIP Status message.
+    /// </summary>
+    public ReplyVoIPStatus? VoIPStatus { get; set; }
+
+    /// <summary>
+    /// Parsed alt text state for Reply Alt Text State messages (Message ID 0x0179).
+    /// Contains the Alt Text display state for one or more panels.
+    /// Null if this is not a Reply Alt Text State message.
+    /// </summary>
+    public ReplyAltTextState? AltTextState { get; set; }
+
+    /// <summary>
+    /// Parsed beltpack add result for Reply Beltpack Add messages (Message ID 0x0194).
+    /// Contains the result of a beltpack registration add operation.
+    /// Null if this is not a Reply Beltpack Add message.
+    /// </summary>
+    public ReplyBeltpackAdd? BeltpackAdd { get; set; }
 }

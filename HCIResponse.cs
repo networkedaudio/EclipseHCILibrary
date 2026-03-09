@@ -437,6 +437,26 @@ public static class HCIResponse
                 DecodeReplyPeripheralInfo(reply);
                 break;
 
+            case HCIMessageID.ReplyEntityInfo:
+                DecodeReplyEntityInfo(reply);
+                break;
+
+            case HCIMessageID.ReplyIfbStatus:
+                DecodeReplyIfbStatus(reply);
+                break;
+
+            case HCIMessageID.ReplyRoleState:
+                DecodeReplyRoleState(reply);
+                break;
+
+            case HCIMessageID.ReplyAltTextState:
+                DecodeReplyAltTextState(reply);
+                break;
+
+            case HCIMessageID.ReplyBeltpackAdd:
+                DecodeReplyBeltpackAdd(reply);
+                break;
+
             // Additional HCIv2 message handlers will be added here
             default:
                 // Default handler for unimplemented message types
@@ -980,6 +1000,15 @@ public static class HCIResponse
             case ReplyIPPanelSettingsAssign.SubIdPanelConfigurationReply: // Sub ID 3
                 reply.IPPanelSettingsAssign = ReplyIPPanelSettingsAssign.Decode(reply.Payload);
                 break;
+            case ReplyVoIPStatus.SubMessageId: // Sub ID 0x17
+                // VoIPStatus.Parse expects payload starting at the sub message ID byte
+                if (reply.Payload.Length > 5)
+                {
+                    var voipPayload = new byte[reply.Payload.Length - 5];
+                    Array.Copy(reply.Payload, 5, voipPayload, 0, voipPayload.Length);
+                    reply.VoIPStatus = ReplyVoIPStatus.Parse(voipPayload);
+                }
+                break;
             default: // Sub ID 1 or others
                 reply.PanelDiscovery = ReplyPanelDiscovery.Decode(reply.Payload);
                 break;
@@ -1128,5 +1157,50 @@ public static class HCIResponse
     private static void DecodeReplyPeripheralInfo(HCIReply reply)
     {
         reply.PeripheralInfo = ReplyPeripheralInfo.Parse(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply Entity Info message (Message ID 0x00B0) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the entity info payload.</param>
+    private static void DecodeReplyEntityInfo(HCIReply reply)
+    {
+        reply.EntityInfo = ReplyEntityInfo.Parse(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply IFB Status message (Message ID 0x003E) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the IFB status payload.</param>
+    private static void DecodeReplyIfbStatus(HCIReply reply)
+    {
+        reply.IfbStatus = ReplyIfbStatus.Parse(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply Role State message (Message ID 0x0185) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the role state payload.</param>
+    private static void DecodeReplyRoleState(HCIReply reply)
+    {
+        reply.RoleState = ReplyRoleState.Decode(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply Alt Text State message (Message ID 0x0179) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the alt text state payload.</param>
+    private static void DecodeReplyAltTextState(HCIReply reply)
+    {
+        reply.AltTextState = ReplyAltTextState.Decode(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply Beltpack Add message (Message ID 0x0194) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the beltpack add response payload.</param>
+    private static void DecodeReplyBeltpackAdd(HCIReply reply)
+    {
+        reply.BeltpackAdd = ReplyBeltpackAdd.Decode(reply.Payload);
     }
 }

@@ -33,4 +33,11 @@
     <None Remove="EclipseHXSNMP\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="HCITestConsole\**" />
+    <Content Remove="HCITestConsole\**" />
+    <EmbeddedResource Remove="HCITestConsole\**" />
+    <None Remove="HCITestConsole\**" />
+  </ItemGroup>
+
 </Project>
