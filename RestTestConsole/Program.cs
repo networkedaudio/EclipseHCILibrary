@@ -24,12 +24,15 @@ internal static class Program
         while (true)
         {
             WriteColor("\n[Main] ", ConsoleColor.DarkGray);
-            Console.Write("(L)Q  (A)rcadia  (Q)uit > ");
+            Console.Write("(D)iscover  (L)Q  (A)rcadia  (Q)uit > ");
             var key = Console.ReadKey(true).Key;
             Console.WriteLine(key);
 
             switch (key)
             {
+                case ConsoleKey.D:
+                    await RunDiscoveryAsync();
+                    break;
                 case ConsoleKey.L:
                     await RunLqMenuAsync();
                     break;
@@ -40,6 +43,42 @@ internal static class Program
                     Cleanup();
                     return;
             }
+        }
+    }
+
+    // ──────────────────────── Discovery ────────────────────────
+
+    private static async Task RunDiscoveryAsync()
+    {
+        WriteColor("\n── mDNS Device Discovery ──\n", ConsoleColor.Yellow);
+        WriteColor("Scanning for Clear-Com devices (3 seconds)...\n", ConsoleColor.DarkGray);
+
+        try
+        {
+            var devices = await DeviceDiscovery.DiscoverAllAsync(TimeSpan.FromSeconds(3));
+
+            if (devices.Count == 0)
+            {
+                WriteColor("  No devices found.\n", ConsoleColor.Yellow);
+                return;
+            }
+
+            WriteColor($"  Found {devices.Count} device(s):\n\n", ConsoleColor.Green);
+
+            int index = 1;
+            foreach (var device in devices.OrderBy(d => d.Hostname))
+            {
+                string type = device.IsArcadia ? "Arcadia" : device.IsLQ ? "LQ" : "Unknown";
+                var color = device.IsArcadia ? ConsoleColor.Magenta : device.IsLQ ? ConsoleColor.Cyan : ConsoleColor.Gray;
+                WriteColor($"  {index,2}) ", ConsoleColor.White);
+                WriteColor($"[{type,-7}] ", color);
+                Console.WriteLine($"{device.Hostname,-30} {device.Address,-16} :{device.Port}");
+                index++;
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteColor($"  Discovery failed: {ex.Message}\n", ConsoleColor.Red);
         }
     }
 
