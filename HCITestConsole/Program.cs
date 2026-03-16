@@ -705,6 +705,8 @@ internal class Program
                 PrintJson("Alt Text State", reply.AltTextState);
             if (reply.BeltpackAdd != null)
                 PrintJson("Beltpack Add", reply.BeltpackAdd);
+            if (reply.AoipDeviceStatus != null)
+                PrintJson("AoIP Device Status", reply.AoipDeviceStatus);
         }
         catch
         {

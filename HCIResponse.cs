@@ -457,6 +457,10 @@ public static class HCIResponse
                 DecodeReplyBeltpackAdd(reply);
                 break;
 
+            case HCIMessageID.ReplyAoipDeviceStatus:
+                DecodeReplyAoipDeviceStatus(reply);
+                break;
+
             // Additional HCIv2 message handlers will be added here
             default:
                 // Default handler for unimplemented message types
@@ -1202,5 +1206,14 @@ public static class HCIResponse
     private static void DecodeReplyBeltpackAdd(HCIReply reply)
     {
         reply.BeltpackAdd = ReplyBeltpackAdd.Decode(reply.Payload);
+    }
+
+    /// <summary>
+    /// Decodes a Reply AoIP Device Status message (Message ID 0x016B) payload.
+    /// </summary>
+    /// <param name="reply">The reply containing the AoIP device status payload.</param>
+    private static void DecodeReplyAoipDeviceStatus(HCIReply reply)
+    {
+        reply.AoipDeviceStatus = ReplyAoipDeviceStatus.Decode(reply.Payload, reply.Schema);
     }
 }

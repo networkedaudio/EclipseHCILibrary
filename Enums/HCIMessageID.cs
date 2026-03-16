@@ -980,5 +980,12 @@ public enum HCIMessageID : ushort
     /// </summary>
     ReplyBeltpackDelete = 0x0196,
 
+    /// <summary>
+    /// Reply AoIP Device Status (HCIv2).
+    /// Contains sub-typed status messages for AoIP devices (PTP, AES67, IVP, DECT, etc.).
+    /// Message ID 0x016B (363).
+    /// </summary>
+    ReplyAoipDeviceStatus = 0x016B,
+
     // Additional message IDs will be added here as they are defined.
 }

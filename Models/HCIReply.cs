@@ -492,4 +492,11 @@ public class HCIReply
     /// Null if this is not a Reply Beltpack Add message.
     /// </summary>
     public ReplyBeltpackAdd? BeltpackAdd { get; set; }
+
+    /// <summary>
+    /// Parsed AoIP device status for Reply AoIP Device Status messages (Message ID 0x016B).
+    /// Contains sub-typed status messages for AoIP devices (PTP status/stats, AES67, IVP, DECT, etc.).
+    /// Null if this is not a Reply AoIP Device Status message.
+    /// </summary>
+    public ReplyAoipDeviceStatus? AoipDeviceStatus { get; set; }
 }

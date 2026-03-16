@@ -40,4 +40,18 @@
     <None Remove="HCITestConsole\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="RESTLibrary\**" />
+    <Content Remove="RESTLibrary\**" />
+    <EmbeddedResource Remove="RESTLibrary\**" />
+    <None Remove="RESTLibrary\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="RestTestConsole\**" />
+    <Content Remove="RestTestConsole\**" />
+    <EmbeddedResource Remove="RestTestConsole\**" />
+    <None Remove="RestTestConsole\**" />
+  </ItemGroup>
+
 </Project>
