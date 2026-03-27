@@ -30,6 +30,11 @@ public class RequestBeltpackInformationRequest : HCIRequest
     public BeltpackRequestType? RequestType { get; set; }
 
     /// <summary>
+    /// Override flags to set S flag (0x10) as required by the protocol.
+    /// </summary>
+    protected override byte FlagsByte => 0x10;
+
+    /// <summary>
     /// Creates a new Request Beltpack Information request (schema 1 - all entries).
     /// </summary>
     public RequestBeltpackInformationRequest() 

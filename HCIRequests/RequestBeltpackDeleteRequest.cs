@@ -22,7 +22,6 @@ public class RequestBeltpackDeleteRequest : HCIRequest
 
     /// <summary>
     /// PMID (Physical Module ID) of the beltpack to delete.
-    /// Note: Only the lower 3 bytes are used in this message.
     /// </summary>
     public uint Pmid { get; set; }
 
@@ -38,8 +37,8 @@ public class RequestBeltpackDeleteRequest : HCIRequest
     /// <summary>
     /// Creates a new Request Beltpack Delete request with specified PMID.
     /// </summary>
-    /// <param name="pmid">The PMID of the beltpack to delete (lower 3 bytes used).</param>
-    public RequestBeltpackDeleteRequest(uint pmid) 
+    /// <param name="pmid">The PMID of the beltpack to delete.</param>
+    public RequestBeltpackDeleteRequest(uint pmid)
         : base(HCIMessageID.RequestBeltpackDelete)
     {
         Pmid = pmid;
@@ -59,8 +58,10 @@ public class RequestBeltpackDeleteRequest : HCIRequest
     /// <inheritdoc/>
     protected override byte[] GeneratePayload()
     {
-        // Payload: Protocol Tag (4) + Protocol Schema (1) + Reserved (0) + PMID (3) = 8 bytes
-        var payload = new byte[8];
+        Console.WriteLine($"[RequestBeltpackDelete] Generating payload for PMID: 0x{Pmid:X8} ({Pmid})");
+
+        // Payload: Protocol Tag (4) + Protocol Schema (1) + PMID (4) = 9 bytes
+        var payload = new byte[9];
         int offset = 0;
 
         // Protocol Tag: 4 bytes (0xABBACEDE)
@@ -70,12 +71,13 @@ public class RequestBeltpackDeleteRequest : HCIRequest
         // Protocol Schema: 1 byte
         payload[offset++] = ProtocolSchema;
 
-        // Reserved: 0 bytes (nothing to add)
-
-        // PMID: 3 bytes (big-endian, lower 3 bytes of the 4-byte PMID)
+        // PMID: 4 bytes (big-endian, matching the format from ReplyBeltpackInformation)
+        payload[offset++] = (byte)((Pmid >> 24) & 0xFF);
         payload[offset++] = (byte)((Pmid >> 16) & 0xFF);
         payload[offset++] = (byte)((Pmid >> 8) & 0xFF);
         payload[offset++] = (byte)(Pmid & 0xFF);
+
+        Console.WriteLine($"[RequestBeltpackDelete] Payload bytes: {BitConverter.ToString(payload)}");
 
         return payload;
     }

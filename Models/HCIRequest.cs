@@ -41,6 +41,12 @@ public class HCIRequest
     public bool IsUrgent { get; set; }
 
     /// <summary>
+    /// The flags byte to use in the message. Override in derived classes if specific flags are needed.
+    /// Default is 0x00.
+    /// </summary>
+    protected virtual byte FlagsByte => 0x00;
+
+    /// <summary>
     /// Task completion source for async request/response pattern.
     /// </summary>
     internal TaskCompletionSource<HCIReply?>? ResponseCompletionSource { get; set; }
@@ -87,9 +93,9 @@ public class HCIRequest
         // Message ID (big-endian)
         ms.WriteByte((byte)((ushort)MessageID >> 8));
         ms.WriteByte((byte)((ushort)MessageID & 0xFF));
-        
-        // Flags (default to 0)
-        ms.WriteByte(0x00);
+
+        // Flags (use FlagsByte property)
+        ms.WriteByte(FlagsByte);
         
         // Payload
         if (payload.Length > 0)

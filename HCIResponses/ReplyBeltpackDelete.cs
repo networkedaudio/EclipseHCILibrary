@@ -27,22 +27,23 @@ public class ReplyBeltpackDelete
     /// <summary>
     /// Decodes the payload into a ReplyBeltpackDelete.
     /// </summary>
-    /// <param name="payload">The payload bytes (after flags).</param>
+    /// <param name="payload">The payload bytes (after protocol tag and schema have been stripped).</param>
+    /// <param name="schema">The protocol schema version from the message header.</param>
     /// <returns>The decoded reply.</returns>
-    public static ReplyBeltpackDelete Decode(byte[] payload)
+    public static ReplyBeltpackDelete Decode(byte[] payload, byte schema)
     {
-        var reply = new ReplyBeltpackDelete();
+        var reply = new ReplyBeltpackDelete
+        {
+            ProtocolSchema = schema
+        };
 
-        if (payload.Length < 7)
+        // Note: The protocol tag (AB BA CE DE) and schema byte have already been
+        // stripped by HCIResponse.cs, so the payload starts with the reserved byte.
+
+        if (payload.Length < 2)
             return reply;
 
         int offset = 0;
-
-        // Protocol Tag: 4 bytes (0xABBACEDE) - skip
-        offset += 4;
-
-        // Protocol Schema: 1 byte
-        reply.ProtocolSchema = payload[offset++];
 
         // Reserved: 1 byte - skip
         offset++;

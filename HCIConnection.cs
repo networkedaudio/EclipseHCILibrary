@@ -205,6 +205,7 @@ public class HCIConnection : IDisposable
         var message = request.BuildMessage();
 
         DebugHelper.WriteBytes($"TX [{request.MessageID}]", message);
+        Console.WriteLine($"TX [{request.MessageID}] ({message.Length} bytes): {BitConverter.ToString(message)}");
 
         await _stream.WriteAsync(message);
 

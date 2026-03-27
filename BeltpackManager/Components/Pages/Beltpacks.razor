@@ -1,0 +1,523 @@
+@page "/beltpacks"
+@using BeltpackManager.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.HCIRequests
+@using HCILibrary.Models
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject IConfiguration Configuration
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Beltpacks</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Beltpacks</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(debugMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">@debugMessage</MudAlert>
+}
+
+@if (!isConnected && !loading)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div></div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenAddDialog" Disabled="!isConnected || loading">
+        Add Beltpack
+    </MudButton>
+</div>
+
+<MudText Typo="Typo.h4" GutterBottom="true" Class="mt-4">Map/OTA Beltpacks</MudText>
+<MudTable Items="@mapOtaBeltpacks" Hover="true" Striped="true" Dense="false" Loading="@loading">
+    <HeaderContent>
+        <MudTh>Serial Number</MudTh>
+        <MudTh>PMID</MudTh>
+        <MudTh>Default Role</MudTh>
+        <MudTh>Mode</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Serial Number">@context.SerialNumber</MudTd>
+        <MudTd DataLabel="PMID">@context.Pmid</MudTd>
+        <MudTd DataLabel="Default Role">@context.DefaultRole</MudTd>
+        <MudTd DataLabel="Mode">
+            <MudChip T="string" Color="@GetModeColor(context.Mode)" Size="Size.Small">
+                @context.Mode
+            </MudChip>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>@(loading ? "Loading beltpacks..." : "No Map/OTA beltpacks found")</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+<MudText Typo="Typo.h4" GutterBottom="true" Class="mt-6">HCI-Added Beltpacks</MudText>
+<MudTable Items="@hciBeltpacks" Hover="true" Striped="true" Dense="false" Loading="@loading">
+    <HeaderContent>
+        <MudTh>Serial Number</MudTh>
+        <MudTh>PMID</MudTh>
+        <MudTh>Default Role</MudTh>
+        <MudTh>Mode</MudTh>
+        <MudTh Style="width: 100px;">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Serial Number">@context.SerialNumber</MudTd>
+        <MudTd DataLabel="PMID">@context.Pmid</MudTd>
+        <MudTd DataLabel="Default Role">@context.DefaultRole</MudTd>
+        <MudTd DataLabel="Mode">
+            <MudChip T="string" Color="@GetModeColor(context.Mode)" Size="Size.Small">
+                @context.Mode
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                           Color="Color.Error" 
+                           Size="Size.Small" 
+                           OnClick="@(() => DeleteBeltpackAsync(context))"
+                           Title="Delete this beltpack" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>@(loading ? "Loading beltpacks..." : "No HCI-added beltpacks found")</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@if (showAddDialog)
+{
+    <MudPaper Class="pa-4 mt-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-4">Add Beltpack via HCI</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="newBeltpack.SerialNumber" 
+                              Label="Serial Number" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense"
+                              HelperText="Decimal format (e.g., 069968)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="newBeltpack.Pmid" 
+                              Label="PMID" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense"
+                              HelperText="Decimal format or use same as Serial" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="newBeltpack.Name" 
+                              Label="Name" 
+                              MaxLength="15" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense" 
+                              Counter="15"
+                              HelperText="Max 15 characters" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="newBeltpack.Mode" 
+                           Label="Configuration Mode" 
+                           Variant="Variant.Outlined" 
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("Pool")">Pool - No fixed assignment</MudSelectItem>
+                    <MudSelectItem Value="@("FixedRole")">Fixed Role - Always assigned to specific role</MudSelectItem>
+                    <MudSelectItem Value="@("PreferredRole")">Preferred Role - Preferred assignment to specific role</MudSelectItem>
+                    <MudSelectItem Value="@("PreferredTeam")">Preferred Team - Preferred assignment to role team</MudSelectItem>
+                    <MudSelectItem Value="@("PreferredRoleAndTeam")">Preferred Role and Team - Both role and team preference</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            @if (newBeltpack.Mode == "FixedRole" || newBeltpack.Mode == "PreferredRole" || newBeltpack.Mode == "PreferredRoleAndTeam")
+            {
+                <MudItem xs="12">
+                    <MudNumericField @bind-Value="newBeltpack.Role" 
+                                     Label="Role" 
+                                     Variant="Variant.Outlined" 
+                                     Margin="Margin.Dense" 
+                                     Min="1" 
+                                     Max="65534"
+                                     HelperText="Role number (1-65534)" />
+                </MudItem>
+            }
+            @if (newBeltpack.Mode == "PreferredTeam" || newBeltpack.Mode == "PreferredRoleAndTeam")
+            {
+                <MudItem xs="12">
+                    <MudNumericField @bind-Value="newBeltpack.RoleTeam" 
+                                     Label="Role Team" 
+                                     Variant="Variant.Outlined" 
+                                     Margin="Margin.Dense" 
+                                     Min="0" 
+                                     Max="254"
+                                     HelperText="Role team number (0-254)" />
+                </MudItem>
+            }
+            <MudItem xs="12" Class="d-flex justify-end gap-2">
+                <MudButton OnClick="CloseAddDialog" Variant="Variant.Outlined">Cancel</MudButton>
+                <MudButton Color="Color.Primary" 
+                           Variant="Variant.Filled" 
+                           OnClick="AddBeltpackAsync"
+                           Disabled="@(!IsFormValid())">
+                    Add Beltpack
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    private bool loading = true;
+    private bool isConnected = false;
+    private string? errorMessage;
+    private string? debugMessage;
+    private List<Beltpack> mapOtaBeltpacks = new();
+    private List<Beltpack> hciBeltpacks = new();
+    private bool firstRender = true;
+    private bool showAddDialog = false;
+    private NewBeltpackModel newBeltpack = new();
+
+    protected override void OnInitialized()
+    {
+        // Don't do async work here - it blocks rendering
+        // Just set up initial state
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            this.firstRender = false;
+
+            // Now load data asynchronously without blocking the UI
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ConnectAndLoadAsync();
+                }
+                catch (Exception ex)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Error: {ex.Message}";
+                        loading = false;
+                        StateHasChanged();
+                    });
+                }
+            });
+        }
+    }
+
+    private async Task ConnectAndLoadAsync()
+    {
+        try
+        {
+            // Get matrix IP from configuration
+            var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = $"Connecting to matrix at {matrixIp}...";
+                StateHasChanged();
+            });
+
+            // Connect to matrix if not already connected
+            if (!HCIService.IsConnected)
+            {
+                isConnected = await HCIService.ConnectAsync(matrixIp);
+
+                if (!isConnected)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Failed to connect to matrix at {matrixIp}";
+                        debugMessage = null;
+                        loading = false;
+                        StateHasChanged();
+                    });
+                    return;
+                }
+            }
+            else
+            {
+                isConnected = true;
+            }
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = "Connected! Requesting beltpack information...";
+                StateHasChanged();
+            });
+
+            await LoadBeltpacksAsync();
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error during connection: {ex.Message}";
+                debugMessage = null;
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadBeltpacksAsync()
+    {
+        try
+        {
+            // Request Map/OTA beltpack information
+            Console.WriteLine("[Beltpacks] Requesting Map/OTA beltpacks...");
+            var mapOtaInfo = await HCIService.GetMapOtaBeltpacksAsync();
+            Console.WriteLine($"[Beltpacks] Received Map/OTA response with {mapOtaInfo?.Beltpacks.Count ?? 0} beltpacks");
+
+            // Add delay to ensure the first request/response cycle completes
+            await Task.Delay(500);
+
+            // Request HCI-added beltpack information
+            Console.WriteLine("[Beltpacks] Requesting HCI-added beltpacks...");
+            var hciInfo = await HCIService.GetHciAddedBeltpacksAsync();
+            Console.WriteLine($"[Beltpacks] Received HCI-added response with {hciInfo?.Beltpacks.Count ?? 0} beltpacks");
+
+            await InvokeAsync(() =>
+            {
+                // Process Map/OTA beltpacks
+                if (mapOtaInfo != null && mapOtaInfo.Beltpacks.Count > 0)
+                {
+                    mapOtaBeltpacks = mapOtaInfo.Beltpacks
+                        .Select(entry => new Beltpack
+                        {
+                            SerialNumber = entry.SerialNumber.ToString("D6"),
+                            Pmid = entry.Pmid.ToString("X8"),
+                            DefaultRole = entry.DefaultRoleOneIndexed,
+                            Mode = entry.Mode.ToString()
+                        })
+                        .ToList();
+                }
+
+                // Process HCI-added beltpacks
+                if (hciInfo != null && hciInfo.Beltpacks.Count > 0)
+                {
+                    hciBeltpacks = hciInfo.Beltpacks
+                        .Select(entry => new Beltpack
+                        {
+                            SerialNumber = entry.SerialNumber.ToString("D6"),
+                            Pmid = entry.Pmid.ToString("X8"),
+                            PmidRaw = entry.Pmid,
+                            DefaultRole = entry.DefaultRoleOneIndexed,
+                            Mode = entry.Mode.ToString()
+                        })
+                        .ToList();
+                }
+
+                debugMessage = $"Loaded {mapOtaBeltpacks.Count} Map/OTA beltpack(s) and {hciBeltpacks.Count} HCI-added beltpack(s)";
+                loading = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error loading beltpacks: {ex.Message}";
+                debugMessage = $"Stack trace: {ex.StackTrace}";
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private Color GetModeColor(string mode)
+    {
+        return mode switch
+        {
+            "FixedRole" => Color.Success,
+            "Pool" => Color.Info,
+            "NotSet" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private void OpenAddDialog()
+    {
+        newBeltpack = new NewBeltpackModel();
+        showAddDialog = true;
+    }
+
+    private void CloseAddDialog()
+    {
+        showAddDialog = false;
+    }
+
+    private async Task AddBeltpackAsync()
+    {
+        try
+        {
+            errorMessage = null;
+            debugMessage = $"Adding beltpack {newBeltpack.SerialNumber}...";
+
+            // Parse serial number and PMID
+            if (!uint.TryParse(newBeltpack.SerialNumber, out uint serialNumber))
+            {
+                errorMessage = "Invalid serial number format";
+                return;
+            }
+
+            if (!uint.TryParse(newBeltpack.Pmid, out uint pmid))
+            {
+                errorMessage = "Invalid PMID format";
+                return;
+            }
+
+            // Create the request based on mode
+            HCILibrary.HCIRequests.RequestBeltpackAddRequest request = newBeltpack.Mode switch
+            {
+                "Pool" => HCILibrary.HCIRequests.RequestBeltpackAddRequest.PoolMode(serialNumber, pmid, newBeltpack.Name),
+                "FixedRole" => HCILibrary.HCIRequests.RequestBeltpackAddRequest.FixedRoleMode(serialNumber, pmid, newBeltpack.Name, (ushort)newBeltpack.Role),
+                "PreferredRole" => HCILibrary.HCIRequests.RequestBeltpackAddRequest.PreferredRoleMode(serialNumber, pmid, newBeltpack.Name, (ushort)newBeltpack.Role),
+                "PreferredTeam" => HCILibrary.HCIRequests.RequestBeltpackAddRequest.PreferredTeamMode(serialNumber, pmid, newBeltpack.Name, (byte)newBeltpack.RoleTeam),
+                "PreferredRoleAndTeam" => HCILibrary.HCIRequests.RequestBeltpackAddRequest.PreferredRoleAndTeamMode(serialNumber, pmid, newBeltpack.Name, (ushort)newBeltpack.Role, (byte)newBeltpack.RoleTeam),
+                _ => HCILibrary.HCIRequests.RequestBeltpackAddRequest.PoolMode(serialNumber, pmid, newBeltpack.Name)
+            };
+
+            var result = await HCIService.AddBeltpackAsync(request);
+
+            if (result != null && result.IsSuccess)
+            {
+                debugMessage = $"Beltpack {newBeltpack.SerialNumber} added successfully!";
+                showAddDialog = false;
+
+                // Reload beltpacks
+                await LoadBeltpacksAsync();
+            }
+            else
+            {
+                errorMessage = result != null 
+                    ? $"Failed to add beltpack: {result.Result}" 
+                    : "Failed to add beltpack: No response from matrix";
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding beltpack: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private bool IsFormValid()
+    {
+        // Check if required fields are filled
+        if (string.IsNullOrWhiteSpace(newBeltpack.SerialNumber)) return false;
+        if (string.IsNullOrWhiteSpace(newBeltpack.Pmid)) return false;
+        if (string.IsNullOrWhiteSpace(newBeltpack.Name)) return false;
+
+        // Validate serial number format
+        if (!uint.TryParse(newBeltpack.SerialNumber, out _)) return false;
+
+        // Validate PMID format
+        if (!uint.TryParse(newBeltpack.Pmid, out _)) return false;
+
+        // Mode-specific validations
+        if (newBeltpack.Mode == "FixedRole" || newBeltpack.Mode == "PreferredRole" || newBeltpack.Mode == "PreferredRoleAndTeam")
+        {
+            if (newBeltpack.Role < 1 || newBeltpack.Role > 65534) return false;
+        }
+
+        if (newBeltpack.Mode == "PreferredTeam" || newBeltpack.Mode == "PreferredRoleAndTeam")
+        {
+            if (newBeltpack.RoleTeam < 0 || newBeltpack.RoleTeam > 254) return false;
+        }
+
+        return true;
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+
+    private async Task DeleteBeltpackAsync(Beltpack beltpack)
+    {
+        try
+        {
+            errorMessage = null;
+            debugMessage = $"Deleting beltpack {beltpack.SerialNumber} (PMID: {beltpack.Pmid})...";
+            StateHasChanged();
+
+            // Use the raw PMID value directly
+            uint pmid = beltpack.PmidRaw;
+            Console.WriteLine($"[Beltpacks] Deleting beltpack with PMID: 0x{pmid:X8} ({pmid})");
+
+            var result = await HCIService.DeleteBeltpackAsync(pmid);
+
+            if (result != null && result.Success)
+            {
+                debugMessage = $"Beltpack {beltpack.SerialNumber} deleted successfully!";
+
+                // Reload only HCI-added beltpacks (more efficient than reloading both tables)
+                loading = true;
+                StateHasChanged();
+
+                var hciInfo = await HCIService.GetHciAddedBeltpacksAsync();
+
+                if (hciInfo != null && hciInfo.Beltpacks.Count > 0)
+                {
+                    hciBeltpacks = hciInfo.Beltpacks
+                        .Select(entry => new Beltpack
+                        {
+                            SerialNumber = entry.SerialNumber.ToString("D6"),
+                            Pmid = entry.Pmid.ToString("X8"),
+                            PmidRaw = entry.Pmid,
+                            DefaultRole = entry.DefaultRoleOneIndexed,
+                            Mode = entry.Mode.ToString()
+                        })
+                        .ToList();
+                }
+                else
+                {
+                    hciBeltpacks = new();
+                }
+
+                debugMessage = $"Beltpack deleted. {hciBeltpacks.Count} HCI-added beltpack(s) remaining.";
+                loading = false;
+            }
+            else
+            {
+                errorMessage = result != null && result.EntryNotFound
+                    ? $"Beltpack not found"
+                    : "Failed to delete beltpack: No response from matrix";
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting beltpack: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    public class Beltpack
+    {
+        public string SerialNumber { get; set; } = string.Empty;
+        public string Pmid { get; set; } = string.Empty;
+        public uint PmidRaw { get; set; }
+        public int DefaultRole { get; set; }
+        public string Mode { get; set; } = string.Empty;
+    }
+
+    public class NewBeltpackModel
+    {
+        public string SerialNumber { get; set; } = string.Empty;
+        public string Pmid { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Mode { get; set; } = "Pool";
+        public int Role { get; set; } = 1;
+        public int RoleTeam { get; set; } = 0;
+    }
+}

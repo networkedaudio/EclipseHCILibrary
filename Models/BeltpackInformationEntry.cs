@@ -23,6 +23,12 @@ public class BeltpackInformationEntry
     public ushort DefaultRole { get; set; }
 
     /// <summary>
+    /// Gets the default role as a 1-indexed value (adds 1 to the 0-indexed DefaultRole).
+    /// Use this for display purposes where roles are numbered starting from 1.
+    /// </summary>
+    public ushort DefaultRoleOneIndexed => (ushort)(DefaultRole + 1);
+
+    /// <summary>
     /// Beltpack configuration mode.
     /// </summary>
     public BeltpackConfigMode Mode { get; set; }

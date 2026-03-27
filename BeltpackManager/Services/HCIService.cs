@@ -1,0 +1,390 @@
+using HCILibrary;
+using HCILibrary.HCIRequests;
+using HCILibrary.HCIResponses;
+using HCILibrary.Models;
+using HCILibrary.Enums;
+
+namespace BeltpackManager.Services;
+
+/// <summary>
+/// Service for managing HCI connection to the Eclipse matrix.
+/// </summary>
+public class HCIService : IAsyncDisposable
+{
+    private HCIConnection? _connection;
+    private readonly object _lock = new();
+    private TaskCompletionSource? _connectionReadyTcs;
+
+    /// <summary>
+    /// Event raised when a message is received from the matrix.
+    /// </summary>
+    public event EventHandler<HCIReply>? MessageReceived;
+
+    /// <summary>
+    /// Event raised when the connection state changes.
+    /// </summary>
+    public event EventHandler<bool>? ConnectionStateChanged;
+
+    /// <summary>
+    /// Gets whether the service is currently connected.
+    /// </summary>
+    public bool IsConnected => _connection?.IsConnected ?? false;
+
+    /// <summary>
+    /// Connects to the HCI matrix at the specified IP address.
+    /// </summary>
+    /// <param name="ipAddress">The IP address of the matrix.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if connected successfully, false otherwise.</returns>
+    public async Task<bool> ConnectAsync(string ipAddress, CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            if (_connection != null)
+            {
+                return _connection.IsConnected;
+            }
+
+            _connectionReadyTcs = new TaskCompletionSource();
+            _connection = new HCIConnection(ipAddress);
+            _connection.MessageReceived += OnMessageReceived;
+            _connection.ConnectionStateChanged += OnConnectionStateChanged;
+        }
+
+        bool connected = await _connection.ConnectAsync(cancellationToken);
+
+        if (connected)
+        {
+            _connectionReadyTcs?.TrySetResult();
+        }
+        else
+        {
+            _connectionReadyTcs?.TrySetException(new Exception("Failed to connect"));
+            await DisconnectAsync();
+        }
+
+        return connected;
+    }
+
+    /// <summary>
+    /// Disconnects from the matrix.
+    /// </summary>
+    public async Task DisconnectAsync()
+    {
+        HCIConnection? conn;
+        lock (_lock)
+        {
+            conn = _connection;
+            _connection = null;
+            _connectionReadyTcs = null;
+        }
+
+        if (conn != null)
+        {
+            await conn.DisconnectAsync();
+            conn.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Requests beltpack information from the matrix.
+    /// </summary>
+    /// <returns>The beltpack info reply, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackInformation?> GetBeltpackInformationAsync()
+    {
+        return await GetBeltpackInformationAsync(RequestBeltpackInformationRequest.AllEntries());
+    }
+
+    /// <summary>
+    /// Requests Map/OTA beltpack information from the matrix.
+    /// </summary>
+    /// <returns>The beltpack info reply for Map/OTA entries, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackInformation?> GetMapOtaBeltpacksAsync()
+    {
+        return await GetBeltpackInformationAsync(RequestBeltpackInformationRequest.MapOrOtaEntries());
+    }
+
+    /// <summary>
+    /// Requests HCI-added beltpack information from the matrix.
+    /// </summary>
+    /// <returns>The beltpack info reply for HCI-added entries, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackInformation?> GetHciAddedBeltpacksAsync()
+    {
+        return await GetBeltpackInformationAsync(RequestBeltpackInformationRequest.HciAddedEntries());
+    }
+
+    /// <summary>
+    /// Internal method to request beltpack information with a specific request type.
+    /// </summary>
+    private async Task<ReplyBeltpackInformation?> GetBeltpackInformationAsync(RequestBeltpackInformationRequest request)
+    {
+        if (_connection == null || !_connection.IsConnected)
+        {
+            Console.WriteLine("[HCIService] Not connected");
+            return null;
+        }
+
+        // Wait for connection to be ready
+        if (_connectionReadyTcs != null)
+        {
+            await _connectionReadyTcs.Task;
+        }
+
+        var requestTypeDesc = request.ProtocolSchema == 2 
+            ? $"Schema 2, RequestType={(int?)request.RequestType}" 
+            : "Schema 1 (All entries)";
+        Console.WriteLine($"[HCIService] Sending RequestBeltpackInformation (Message ID 0x0101), {requestTypeDesc}");
+
+        // Create a TaskCompletionSource to wait for the complete reply
+        var tcs = new TaskCompletionSource<ReplyBeltpackInformation?>();
+
+        // Accumulate beltpack entries from all message fragments
+        var allBeltpacks = new List<BeltpackInformationEntry>();
+        int fragmentCount = 0;
+        byte protocolSchema = 1;
+
+        // Track ALL messages to see what we're getting
+        int messageCount = 0;
+        var receivedMessageIds = new HashSet<HCIMessageID>();
+
+        EventHandler<HCIReply>? handler = null;
+        handler = (sender, reply) =>
+        {
+            messageCount++;
+            receivedMessageIds.Add(reply.MessageID);
+
+            // Log every 10th message or important ones
+            if (messageCount % 10 == 0 || reply.MessageID == HCIMessageID.ReplyBeltpackInformation || reply.MessageID == HCIMessageID.ReplyBeltpackStatus)
+            {
+                Console.WriteLine($"[HCIService] Message #{messageCount}: ID={reply.MessageID} (0x{(int)reply.MessageID:X4}), HasBeltpackInformation={reply.BeltpackInformation != null}");
+            }
+
+            if (reply.MessageID == HCIMessageID.ReplyBeltpackInformation)
+            {
+                fragmentCount++;
+                Console.WriteLine($"[HCIService] Got ReplyBeltpackInformation fragment #{fragmentCount}! IsNull={reply.BeltpackInformation == null}, M flag={reply.Flags.M}");
+
+                if (reply.BeltpackInformation != null)
+                {
+                    protocolSchema = reply.BeltpackInformation.ProtocolSchema;
+                    int countInFragment = reply.BeltpackInformation.Beltpacks.Count;
+                    allBeltpacks.AddRange(reply.BeltpackInformation.Beltpacks);
+
+                    Console.WriteLine($"[HCIService] Fragment #{fragmentCount}: Schema={protocolSchema}, Count={reply.BeltpackInformation.Count}, Beltpacks in fragment={countInFragment}, Total accumulated={allBeltpacks.Count}");
+
+                    // Check if more fragments are expected (M flag = More data)
+                    if (!reply.Flags.M)
+                    {
+                        // Last fragment - create aggregated result
+                        Console.WriteLine($"[HCIService] Last fragment received (M=false). Creating aggregated result with {allBeltpacks.Count} total beltpacks from {fragmentCount} fragments");
+
+                        var aggregatedResult = new ReplyBeltpackInformation
+                        {
+                            ProtocolSchema = protocolSchema,
+                            Beltpacks = allBeltpacks
+                        };
+
+                        _connection!.MessageReceived -= handler;
+                        tcs.TrySetResult(aggregatedResult);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[HCIService] More fragments expected (M=true), continuing to listen...");
+                    }
+                }
+            }
+        };
+
+        _connection.MessageReceived += handler;
+
+        try
+        {
+            // Send the request
+            _connection.RequestQueue?.Enqueue(request);
+            Console.WriteLine($"[HCIService] Request enqueued");
+
+            // Wait for response with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            cts.Token.Register(() => 
+            {
+                Console.WriteLine($"[HCIService] Timeout after {messageCount} messages. Received message types: {string.Join(", ", receivedMessageIds.Select(id => $"{id}(0x{(int)id:X4})"))}");
+                Console.WriteLine($"[HCIService] Received {fragmentCount} ReplyBeltpackInformation fragments with {allBeltpacks.Count} total beltpacks");
+
+                // If we got at least one fragment, return what we have
+                if (allBeltpacks.Count > 0)
+                {
+                    Console.WriteLine($"[HCIService] Returning partial result due to timeout");
+                    var partialResult = new ReplyBeltpackInformation
+                    {
+                        ProtocolSchema = protocolSchema,
+                        Beltpacks = allBeltpacks
+                    };
+                    tcs.TrySetResult(partialResult);
+                }
+                else
+                {
+                    Console.WriteLine($"[HCIService] No ReplyBeltpackInformation (0x0102) received");
+                    tcs.TrySetResult(null);
+                }
+            });
+
+            var result = await tcs.Task;
+            Console.WriteLine($"[HCIService] GetBeltpackInformationAsync returning: {(result == null ? "null" : $"Count={result.Count}")}");
+            return result;
+        }
+        finally
+        {
+            _connection.MessageReceived -= handler;
+        }
+    }
+
+    private void OnMessageReceived(object? sender, HCIReply reply)
+    {
+        MessageReceived?.Invoke(this, reply);
+    }
+
+    private void OnConnectionStateChanged(object? sender, bool connected)
+    {
+        ConnectionStateChanged?.Invoke(this, connected);
+    }
+
+    /// <summary>
+    /// Adds a beltpack to the matrix.
+    /// </summary>
+    /// <param name="request">The beltpack add request.</param>
+    /// <returns>The reply indicating success or failure, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackAdd?> AddBeltpackAsync(RequestBeltpackAddRequest request)
+    {
+        if (_connection == null || !_connection.IsConnected)
+        {
+            Console.WriteLine("[HCIService] Not connected");
+            return null;
+        }
+
+        // Wait for connection to be ready
+        if (_connectionReadyTcs != null)
+        {
+            await _connectionReadyTcs.Task;
+        }
+
+        Console.WriteLine($"[HCIService] Sending RequestBeltpackAdd (Message ID 0x0193) for serial {request.SerialNumber}");
+
+        // Create a TaskCompletionSource to wait for the reply
+        var tcs = new TaskCompletionSource<ReplyBeltpackAdd?>();
+
+        EventHandler<HCIReply>? handler = null;
+        handler = (sender, reply) =>
+        {
+            if (reply.MessageID == HCIMessageID.ReplyBeltpackAdd)
+            {
+                Console.WriteLine($"[HCIService] Got ReplyBeltpackAdd! IsNull={reply.BeltpackAdd == null}");
+
+                if (reply.BeltpackAdd != null)
+                {
+                    Console.WriteLine($"[HCIService] BeltpackAdd result: Serial={reply.BeltpackAdd.SerialNumber:X8}, Result={reply.BeltpackAdd.Result}");
+                }
+
+                _connection!.MessageReceived -= handler;
+                tcs.TrySetResult(reply.BeltpackAdd);
+            }
+        };
+
+        _connection.MessageReceived += handler;
+
+        try
+        {
+            // Send the request
+            _connection.RequestQueue?.Enqueue(request);
+            Console.WriteLine($"[HCIService] Request enqueued");
+
+            // Wait for response with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            cts.Token.Register(() => 
+            {
+                Console.WriteLine($"[HCIService] Timeout waiting for ReplyBeltpackAdd");
+                tcs.TrySetResult(null);
+            });
+
+            var result = await tcs.Task;
+            Console.WriteLine($"[HCIService] AddBeltpackAsync returning: {(result == null ? "null" : $"Result={result.Result}")}");
+            return result;
+        }
+        finally
+        {
+            _connection.MessageReceived -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a beltpack from the matrix by PMID.
+    /// </summary>
+    /// <param name="pmid">The PMID of the beltpack to delete.</param>
+    /// <returns>The reply indicating success or failure, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackDelete?> DeleteBeltpackAsync(uint pmid)
+    {
+        if (_connection == null || !_connection.IsConnected)
+        {
+            Console.WriteLine("[HCIService] Not connected");
+            return null;
+        }
+
+        // Wait for connection to be ready
+        if (_connectionReadyTcs != null)
+        {
+            await _connectionReadyTcs.Task;
+        }
+
+        var request = new RequestBeltpackDeleteRequest(pmid);
+        Console.WriteLine($"[HCIService] Sending RequestBeltpackDelete (Message ID 0x0195) for PMID {pmid:X8}");
+
+        // Create a TaskCompletionSource to wait for the reply
+        var tcs = new TaskCompletionSource<ReplyBeltpackDelete?>();
+
+        EventHandler<HCIReply>? handler = null;
+        handler = (sender, reply) =>
+        {
+            if (reply.MessageID == HCIMessageID.ReplyBeltpackDelete)
+            {
+                Console.WriteLine($"[HCIService] Got ReplyBeltpackDelete! IsNull={reply.BeltpackDelete == null}");
+
+                if (reply.BeltpackDelete != null)
+                {
+                    Console.WriteLine($"[HCIService] BeltpackDelete result: Success={reply.BeltpackDelete.Success}");
+                }
+
+                _connection!.MessageReceived -= handler;
+                tcs.TrySetResult(reply.BeltpackDelete);
+            }
+        };
+
+        _connection.MessageReceived += handler;
+
+        try
+        {
+            // Send the request
+            _connection.RequestQueue?.Enqueue(request);
+            Console.WriteLine($"[HCIService] Request enqueued");
+
+            // Wait for response with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            cts.Token.Register(() => 
+            {
+                Console.WriteLine($"[HCIService] Timeout waiting for ReplyBeltpackDelete");
+                tcs.TrySetResult(null);
+            });
+
+            var result = await tcs.Task;
+            Console.WriteLine($"[HCIService] DeleteBeltpackAsync returning: {(result == null ? "null" : $"Success={result.Success}")}");
+            return result;
+        }
+        finally
+        {
+            _connection.MessageReceived -= handler;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await DisconnectAsync();
+    }
+}

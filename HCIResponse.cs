@@ -47,6 +47,14 @@ public static class HCIResponse
             ? (HCIMessageID)messageIdValue 
             : HCIMessageID.Unknown;
 
+        // Debug: Log message ID (especially looking for ReplyBeltpackInformation = 0x0102 = 258)
+        if (messageIdValue == 0x0102 || messageIdValue == 258)
+        {
+            Console.WriteLine($"[HCIResponse] *** Received ReplyBeltpackInformation (0x{messageIdValue:X4})!");
+            Console.WriteLine($"  Complete message ({message.Length} bytes): {BitConverter.ToString(message)}");
+            Console.WriteLine($"  Flags byte: 0x{message[6]:X2} (E={((message[6] & 0x01) != 0)}, M={((message[6] & 0x02) != 0)}, U={((message[6] & 0x04) != 0)}, G={((message[6] & 0x08) != 0)}, S={((message[6] & 0x10) != 0)}, N={((message[6] & 0x20) != 0)})");
+        }
+
         // Read Flags (1 byte)
         reply.Flags = new HCIFlags(message[6]);
 
@@ -1142,7 +1150,7 @@ public static class HCIResponse
     /// <param name="reply">The reply containing the beltpack information payload.</param>
     private static void DecodeReplyBeltpackInformation(HCIReply reply)
     {
-        reply.BeltpackInformation = ReplyBeltpackInformation.Decode(reply.Payload);
+        reply.BeltpackInformation = ReplyBeltpackInformation.Decode(reply.Payload, reply.Schema);
     }
 
     /// <summary>
@@ -1151,7 +1159,7 @@ public static class HCIResponse
     /// <param name="reply">The reply containing the beltpack delete response payload.</param>
     private static void DecodeReplyBeltpackDelete(HCIReply reply)
     {
-        reply.BeltpackDelete = ReplyBeltpackDelete.Decode(reply.Payload);
+        reply.BeltpackDelete = ReplyBeltpackDelete.Decode(reply.Payload, reply.Schema);
     }
 
     /// <summary>
@@ -1205,7 +1213,7 @@ public static class HCIResponse
     /// <param name="reply">The reply containing the beltpack add response payload.</param>
     private static void DecodeReplyBeltpackAdd(HCIReply reply)
     {
-        reply.BeltpackAdd = ReplyBeltpackAdd.Decode(reply.Payload);
+        reply.BeltpackAdd = ReplyBeltpackAdd.Decode(reply.Payload, reply.Schema);
     }
 
     /// <summary>
