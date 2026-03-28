@@ -1,0 +1,359 @@
+@page "/cards"
+@using BeltpackManager.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.HCIRequests
+@using HCILibrary.Models
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject IConfiguration Configuration
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Cards</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Matrix Cards</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(debugMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">@debugMessage</MudAlert>
+}
+
+@if (!isConnected && !loading)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.body1">
+            <strong>Total Cards:</strong> @cards.Count |
+            <strong>Good:</strong> @cards.Count(c => c.Condition == CardCondition.Good) |
+            <strong>Faulty/Absent:</strong> @cards.Count(c => c.Condition == CardCondition.FaultyOrAbsent)
+        </MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshCardsAsync" Disabled="!isConnected || loading">
+        @if (loading)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+        }
+        Refresh
+    </MudButton>
+</div>
+
+<MudTable Items="@cards" Hover="true" Striped="true" Dense="false" Loading="@loading" 
+          Filter="new Func<CardDisplay, bool>(FilterFunc)">
+    <ToolBarContent>
+        <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
+        <MudSpacer />
+        <MudSelect T="string" Label="Filter by Type" @bind-Value="filterCardType" Variant="Variant.Outlined" 
+                   Margin="Margin.Dense" Style="width: 200px;" Class="mr-2">
+            <MudSelectItem Value="@("All")">All Types</MudSelectItem>
+            @foreach (var cardType in Enum.GetValues<CardType>().Where(t => t != CardType.Unknown))
+            {
+                <MudSelectItem Value="@cardType.ToString()">@GetCardTypeName(cardType)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string" Label="Filter by Condition" @bind-Value="filterCondition" Variant="Variant.Outlined" 
+                   Margin="Margin.Dense" Style="width: 180px;">
+            <MudSelectItem Value="@("All")">All Conditions</MudSelectItem>
+            <MudSelectItem Value="@("Good")">Good</MudSelectItem>
+            <MudSelectItem Value="@("FaultyOrAbsent")">Faulty/Absent</MudSelectItem>
+        </MudSelect>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<CardDisplay, object>(x => x.Slot)">Slot</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CardDisplay, object>(x => x.CardType)">Card Type</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CardDisplay, object>(x => x.Condition)">Condition</MudTableSortLabel></MudTh>
+        <MudTh>Slot Zero</MudTh>
+        <MudTh>Raw Status</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Slot">@context.Slot</MudTd>
+        <MudTd DataLabel="Card Type">
+            <MudChip T="string" Color="@GetCardTypeColor(context.CardType)" Size="Size.Small">
+                @GetCardTypeName(context.CardType)
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Condition">
+            <MudChip T="string" Color="@GetConditionColor(context.Condition)" Size="Size.Small">
+                @GetConditionName(context.Condition)
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Slot Zero">
+            @if (context.IsSlotZero)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.RadioButtonUnchecked" Color="Color.Default" Size="Size.Small" />
+            }
+        </MudTd>
+        <MudTd DataLabel="Raw Status">
+            <code>@($"0x{context.RawStatus:X4}")</code>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>@(loading ? "Loading cards..." : "No cards found")</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private bool loading = true;
+    private bool isConnected = false;
+    private string? errorMessage;
+    private string? debugMessage;
+    private List<CardDisplay> cards = new();
+    private string searchString = string.Empty;
+    private string filterCardType = "All";
+    private string filterCondition = "All";
+    private bool firstRender = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            this.firstRender = false;
+
+            // Subscribe to connection state changes
+            HCIService.ConnectionStateChanged += OnConnectionStateChanged;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ConnectAndLoadAsync();
+                }
+                catch (Exception ex)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Error: {ex.Message}";
+                        loading = false;
+                        StateHasChanged();
+                    });
+                }
+            });
+        }
+    }
+
+    private async Task ConnectAndLoadAsync()
+    {
+        try
+        {
+            var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = $"Connecting to matrix at {matrixIp}...";
+                StateHasChanged();
+            });
+
+            if (!HCIService.IsConnected)
+            {
+                isConnected = await HCIService.ConnectAsync(matrixIp);
+
+                if (!isConnected)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Failed to connect to matrix at {matrixIp}";
+                        debugMessage = null;
+                        loading = false;
+                        StateHasChanged();
+                    });
+                    return;
+                }
+            }
+            else
+            {
+                isConnected = true;
+            }
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = "Connected! Requesting card information...";
+                StateHasChanged();
+            });
+
+            await LoadCardsAsync();
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error during connection: {ex.Message}";
+                debugMessage = null;
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadCardsAsync()
+    {
+        try
+        {
+            Console.WriteLine("[Cards] Requesting system status via HCI...");
+
+            var systemStatus = await HCIService.GetSystemStatusAsync();
+
+            await InvokeAsync(() =>
+            {
+                if (systemStatus != null && systemStatus.Cards.Count > 0)
+                {
+                    cards = systemStatus.Cards
+                        .Select((card, index) => new CardDisplay
+                        {
+                            Slot = index,
+                            CardType = card.CardType,
+                            Condition = card.Condition,
+                            IsSlotZero = card.IsSlotZero,
+                            RawStatus = card.RawStatus
+                        })
+                        .ToList();
+
+                    debugMessage = $"Loaded {cards.Count} card(s)";
+                }
+                else
+                {
+                    cards = new List<CardDisplay>();
+                    debugMessage = "No cards returned from matrix";
+                }
+
+                loading = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error loading cards: {ex.Message}";
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task RefreshCardsAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        debugMessage = "Refreshing cards...";
+        StateHasChanged();
+
+        await LoadCardsAsync();
+    }
+
+    private void OnConnectionStateChanged(object? sender, bool connected)
+    {
+        isConnected = connected;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool FilterFunc(CardDisplay card)
+    {
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var search = searchString.Trim().ToLower();
+            if (!GetCardTypeName(card.CardType).ToLower().Contains(search) &&
+                !GetConditionName(card.Condition).ToLower().Contains(search) &&
+                !card.Slot.ToString().Contains(search))
+            {
+                return false;
+            }
+        }
+
+        // Card type filter
+        if (filterCardType != "All" && card.CardType.ToString() != filterCardType)
+        {
+            return false;
+        }
+
+        // Condition filter
+        if (filterCondition != "All" && card.Condition.ToString() != filterCondition)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private string GetCardTypeName(CardType cardType)
+    {
+        return cardType switch
+        {
+            CardType.CpuMaster => "CPU Master",
+            CardType.CpuSlave => "CPU Slave",
+            CardType.Mvx => "MVX",
+            CardType.EMadi => "E-MADI",
+            CardType.EDante => "E-DANTE",
+            CardType.EIpa => "E-IPA",
+            CardType.Pcm30 => "PCM30",
+            CardType.EFib => "E-FIB",
+            CardType.EquIvc32Lmc64 => "EQUE/IVC32/LMC64",
+            CardType.Unknown => "Unknown",
+            _ => cardType.ToString()
+        };
+    }
+
+    private Color GetCardTypeColor(CardType cardType)
+    {
+        return cardType switch
+        {
+            CardType.CpuMaster => Color.Primary,
+            CardType.CpuSlave => Color.Secondary,
+            CardType.Mvx => Color.Info,
+            CardType.EMadi => Color.Success,
+            CardType.EDante => Color.Warning,
+            CardType.EIpa => Color.Tertiary,
+            CardType.EFib => Color.Dark,
+            CardType.Unknown => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string GetConditionName(CardCondition condition)
+    {
+        return condition switch
+        {
+            CardCondition.Good => "Good",
+            CardCondition.FaultyOrAbsent => "Faulty/Absent",
+            CardCondition.Unknown => "Unknown",
+            _ => condition.ToString()
+        };
+    }
+
+    private Color GetConditionColor(CardCondition condition)
+    {
+        return condition switch
+        {
+            CardCondition.Good => Color.Success,
+            CardCondition.FaultyOrAbsent => Color.Error,
+            CardCondition.Unknown => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    public void Dispose()
+    {
+        HCIService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+
+    public class CardDisplay
+    {
+        public int Slot { get; set; }
+        public CardType CardType { get; set; }
+        public CardCondition Condition { get; set; }
+        public bool IsSlotZero { get; set; }
+        public ushort RawStatus { get; set; }
+    }
+}

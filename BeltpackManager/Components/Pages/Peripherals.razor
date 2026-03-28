@@ -1,0 +1,414 @@
+@page "/peripherals"
+@using BeltpackManager.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.HCIRequests
+@using HCILibrary.Models
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject IConfiguration Configuration
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Peripherals</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Peripherals</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(debugMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">@debugMessage</MudAlert>
+}
+
+@if (!isConnected && !loading)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">Select Card Slot</MudText>
+    <div class="d-flex align-center gap-4">
+        <MudSelect T="SlotOption" Label="Card Slot" @bind-Value="selectedSlot" Variant="Variant.Outlined"
+                   Style="width: 350px;" Disabled="@(loadingCards || loading)">
+            <MudSelectItem Value="@wirelessOption">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Wifi" Class="mr-2" />
+                    Wireless Devices (Beltpacks, Antennas)
+                </div>
+            </MudSelectItem>
+            @foreach (var slot in availableSlots)
+            {
+                <MudSelectItem Value="@slot">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Memory" Class="mr-2" />
+                        Slot @slot.SlotNumber - @slot.CardTypeName (@slot.ConditionName)
+                    </div>
+                </MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RequestPeripheralInfoAsync" 
+                   Disabled="@(!isConnected || loading || selectedSlot == null)">
+            @if (loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Request Info
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RefreshCardsAsync"
+                   Disabled="@(!isConnected || loadingCards)">
+            @if (loadingCards)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Refresh Cards
+        </MudButton>
+    </div>
+</MudPaper>
+
+@if (peripherals.Count > 0)
+{
+    <MudPaper Class="pa-4" Elevation="2">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h5">Peripheral Information (@peripherals.Count device(s))</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Requested Slot: @(lastRequestedSlot == 0xFF ? "Wireless" : $"Slot {lastRequestedSlot}")
+            </MudText>
+        </div>
+
+        <MudTable Items="@peripherals" Hover="true" Striped="true" Dense="false">
+            <HeaderContent>
+                <MudTh>Slot/Port</MudTh>
+                <MudTh>Label</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Panel Type</MudTh>
+                <MudTh>Keys</MudTh>
+                <MudTh>PMID</MudTh>
+                <MudTh>Firmware</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Slot/Port">
+                    @if (context.HasNoSlot)
+                    {
+                        <span>Role @context.PortNumber</span>
+                    }
+                    else
+                    {
+                        <span>Slot @context.SlotNumber, Port @context.PortNumber</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Label">
+                    <div>
+                        <strong>@(string.IsNullOrEmpty(context.TalkListenLabel) ? "-" : context.TalkListenLabel)</strong>
+                        @if (!string.IsNullOrEmpty(context.TalkListenAlias) && context.TalkListenAlias != context.TalkListenLabel)
+                        {
+                            <br /><small class="text-muted">Alias: @context.TalkListenAlias</small>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsOnline ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsOnline ? "Online" : "Offline")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Panel Type">
+                    <code>@($"0x{context.PanelType:X4}")</code>
+                    @if (context.Type > 0)
+                    {
+                        <br /><small>Type: @context.Type</small>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Keys">@context.NumberOfKeys</MudTd>
+                <MudTd DataLabel="PMID">
+                    @if (context.Pmid > 0)
+                    {
+                        <code>@($"{context.Pmid:X5}")</code>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Firmware">
+                    @if (context.Versions.Count > 0)
+                    {
+                        @foreach (var version in context.Versions)
+                        {
+                            <div><small>@version.ToString()</small></div>
+                        }
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No peripherals found</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </MudPaper>
+}
+else if (!loading && hasRequestedInfo)
+{
+    <MudAlert Severity="Severity.Info">No peripheral information returned for the selected slot.</MudAlert>
+}
+
+@code {
+    private bool loading = false;
+    private bool loadingCards = true;
+    private bool isConnected = false;
+    private bool hasRequestedInfo = false;
+    private string? errorMessage;
+    private string? debugMessage;
+    private byte lastRequestedSlot = 0;
+
+    private List<SlotOption> availableSlots = new();
+    private List<PeripheralInfoEntry> peripherals = new();
+    private SlotOption? selectedSlot;
+    private SlotOption wirelessOption = new SlotOption 
+    { 
+        SlotNumber = 0xFF, 
+        CardType = CardType.Unknown, 
+        CardTypeName = "Wireless", 
+        Condition = CardCondition.Good,
+        ConditionName = "N/A",
+        IsWireless = true 
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            HCIService.ConnectionStateChanged += OnConnectionStateChanged;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ConnectAndLoadAsync();
+                }
+                catch (Exception ex)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Error: {ex.Message}";
+                        loadingCards = false;
+                        StateHasChanged();
+                    });
+                }
+            });
+        }
+    }
+
+    private async Task ConnectAndLoadAsync()
+    {
+        try
+        {
+            var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = $"Connecting to matrix at {matrixIp}...";
+                StateHasChanged();
+            });
+
+            if (!HCIService.IsConnected)
+            {
+                isConnected = await HCIService.ConnectAsync(matrixIp);
+
+                if (!isConnected)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Failed to connect to matrix at {matrixIp}";
+                        debugMessage = null;
+                        loadingCards = false;
+                        StateHasChanged();
+                    });
+                    return;
+                }
+            }
+            else
+            {
+                isConnected = true;
+            }
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = "Connected! Loading available cards...";
+                StateHasChanged();
+            });
+
+            await LoadCardsAsync();
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error during connection: {ex.Message}";
+                debugMessage = null;
+                loadingCards = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadCardsAsync()
+    {
+        try
+        {
+            loadingCards = true;
+            await InvokeAsync(StateHasChanged);
+
+            var systemStatus = await HCIService.GetSystemStatusAsync();
+
+            await InvokeAsync(() =>
+            {
+                availableSlots.Clear();
+
+                if (systemStatus != null && systemStatus.Cards.Count > 0)
+                {
+                    for (int i = 0; i < systemStatus.Cards.Count; i++)
+                    {
+                        var card = systemStatus.Cards[i];
+                        // Only add cards that are present (Good condition)
+                        if (card.Condition == CardCondition.Good || card.CardType != CardType.Unknown)
+                        {
+                            availableSlots.Add(new SlotOption
+                            {
+                                SlotNumber = (byte)i,
+                                CardType = card.CardType,
+                                CardTypeName = GetCardTypeName(card.CardType),
+                                Condition = card.Condition,
+                                ConditionName = card.Condition == CardCondition.Good ? "Good" : "Faulty/Absent",
+                                IsWireless = false
+                            });
+                        }
+                    }
+
+                    debugMessage = $"Found {availableSlots.Count} active card slot(s)";
+                }
+                else
+                {
+                    debugMessage = "No cards found in matrix";
+                }
+
+                // Default to wireless option
+                selectedSlot = wirelessOption;
+                loadingCards = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error loading cards: {ex.Message}";
+                loadingCards = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task RefreshCardsAsync()
+    {
+        errorMessage = null;
+        await LoadCardsAsync();
+    }
+
+    private async Task RequestPeripheralInfoAsync()
+    {
+        if (selectedSlot == null)
+        {
+            errorMessage = "Please select a card slot";
+            return;
+        }
+
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            hasRequestedInfo = true;
+            lastRequestedSlot = selectedSlot.SlotNumber;
+            debugMessage = selectedSlot.IsWireless 
+                ? "Requesting wireless peripheral info..." 
+                : $"Requesting peripheral info for slot {selectedSlot.SlotNumber}...";
+            StateHasChanged();
+
+            var result = await HCIService.GetPeripheralInfoAsync(selectedSlot.SlotNumber);
+
+            await InvokeAsync(() =>
+            {
+                if (result != null && result.Entries.Count > 0)
+                {
+                    peripherals = result.Entries;
+                    debugMessage = $"Received {result.Entries.Count} peripheral(s)";
+                }
+                else
+                {
+                    peripherals = new List<PeripheralInfoEntry>();
+                    debugMessage = "No peripherals returned for the selected slot";
+                }
+
+                loading = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error requesting peripheral info: {ex.Message}";
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private void OnConnectionStateChanged(object? sender, bool connected)
+    {
+        isConnected = connected;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetCardTypeName(CardType cardType)
+    {
+        return cardType switch
+        {
+            CardType.CpuMaster => "CPU Master",
+            CardType.CpuSlave => "CPU Slave",
+            CardType.Mvx => "MVX",
+            CardType.EMadi => "E-MADI",
+            CardType.EDante => "E-DANTE",
+            CardType.EIpa => "E-IPA",
+            CardType.Pcm30 => "PCM30",
+            CardType.EFib => "E-FIB",
+            CardType.EquIvc32Lmc64 => "EQUE/IVC32/LMC64",
+            CardType.Unknown => "Unknown",
+            _ => cardType.ToString()
+        };
+    }
+
+    public void Dispose()
+    {
+        HCIService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+
+    public class SlotOption
+    {
+        public byte SlotNumber { get; set; }
+        public CardType CardType { get; set; }
+        public string CardTypeName { get; set; } = string.Empty;
+        public CardCondition Condition { get; set; }
+        public string ConditionName { get; set; } = string.Empty;
+        public bool IsWireless { get; set; }
+
+        public override string ToString()
+        {
+            return IsWireless ? "Wireless Devices" : $"Slot {SlotNumber} - {CardTypeName}";
+        }
+    }
+}

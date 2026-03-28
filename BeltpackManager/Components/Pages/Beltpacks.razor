@@ -133,13 +133,16 @@
             @if (newBeltpack.Mode == "FixedRole" || newBeltpack.Mode == "PreferredRole" || newBeltpack.Mode == "PreferredRoleAndTeam")
             {
                 <MudItem xs="12">
-                    <MudNumericField @bind-Value="newBeltpack.Role" 
-                                     Label="Role" 
-                                     Variant="Variant.Outlined" 
-                                     Margin="Margin.Dense" 
-                                     Min="1" 
-                                     Max="65534"
-                                     HelperText="Role number (1-65534)" />
+                    <MudSelect @bind-Value="newBeltpack.Role" 
+                               Label="Role" 
+                               Variant="Variant.Outlined" 
+                               Margin="Margin.Dense"
+                               HelperText="Select a role (601-799)">
+                        @for (int i = 601; i <= 799; i++)
+                        {
+                            <MudSelectItem Value="@i">@i</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
             }
             @if (newBeltpack.Mode == "PreferredTeam" || newBeltpack.Mode == "PreferredRoleAndTeam")
@@ -425,7 +428,7 @@
         // Mode-specific validations
         if (newBeltpack.Mode == "FixedRole" || newBeltpack.Mode == "PreferredRole" || newBeltpack.Mode == "PreferredRoleAndTeam")
         {
-            if (newBeltpack.Role < 1 || newBeltpack.Role > 65534) return false;
+            if (newBeltpack.Role < 601 || newBeltpack.Role > 799) return false;
         }
 
         if (newBeltpack.Mode == "PreferredTeam" || newBeltpack.Mode == "PreferredRoleAndTeam")
@@ -517,7 +520,7 @@
         public string Pmid { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Mode { get; set; } = "Pool";
-        public int Role { get; set; } = 1;
+        public int Role { get; set; } = 601;
         public int RoleTeam { get; set; } = 0;
     }
 }

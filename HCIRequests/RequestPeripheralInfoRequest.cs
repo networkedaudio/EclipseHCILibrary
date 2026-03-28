@@ -43,6 +43,7 @@ public class RequestPeripheralInfoRequest : HCIRequest
     public RequestPeripheralInfoRequest()
         : base(HCIMessageID.RequestPeripheralInfo)
     {
+        ExpectedReplyMessageID = HCIMessageID.ReplyPeripheralInfo;
     }
 
     /// <summary>
@@ -54,6 +55,7 @@ public class RequestPeripheralInfoRequest : HCIRequest
         : base(HCIMessageID.RequestPeripheralInfo)
     {
         SlotId = slotId;
+        ExpectedReplyMessageID = HCIMessageID.ReplyPeripheralInfo;
     }
 
     /// <summary>
@@ -71,13 +73,14 @@ public class RequestPeripheralInfoRequest : HCIRequest
     /// <returns>The payload bytes.</returns>
     protected override byte[] GeneratePayload()
     {
-        // Payload structure:
+        // Payload structure (per documentation example):
         // Protocol Tag: 4 bytes (0xABBACEDE)
         // Protocol Schema: 1 byte
-        // Sub Message ID: 1 byte (0x14)
         // Slot ID: 1 byte
+        // Note: The structure section mentions Sub Message ID 0x14, but the example
+        // "00 F7 30 AB BA CE DE 01 FF" doesn't include it.
 
-        var payload = new byte[7];
+        var payload = new byte[6];
         int offset = 0;
 
         // Protocol Tag (4 bytes)
@@ -86,9 +89,6 @@ public class RequestPeripheralInfoRequest : HCIRequest
 
         // Protocol Schema (1 byte)
         payload[offset++] = ProtocolSchema;
-
-        // Sub Message ID (1 byte)
-        payload[offset++] = SubMessageId;
 
         // Slot ID (1 byte)
         payload[offset++] = SlotId;

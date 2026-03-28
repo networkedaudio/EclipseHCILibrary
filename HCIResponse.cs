@@ -47,6 +47,13 @@ public static class HCIResponse
             ? (HCIMessageID)messageIdValue 
             : HCIMessageID.Unknown;
 
+        // Debug: Log ReplyPeripheralInfo (0x007B = 123)
+        if (messageIdValue == 0x007B || messageIdValue == 123)
+        {
+            Console.WriteLine($"[HCIResponse] *** Received ReplyPeripheralInfo (0x{messageIdValue:X4})!");
+            Console.WriteLine($"  Complete message ({message.Length} bytes): {BitConverter.ToString(message)}");
+        }
+
         // Debug: Log message ID (especially looking for ReplyBeltpackInformation = 0x0102 = 258)
         if (messageIdValue == 0x0102 || messageIdValue == 258)
         {

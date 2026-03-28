@@ -46,7 +46,7 @@ public class RequestBeltpackInformationRequest : HCIRequest
     /// <summary>
     /// Creates a new Request Beltpack Information request with a specific request type (schema 2).
     /// </summary>
-    /// <param name="requestType">The type of beltpack entries to request.</param>
+    /// <param name="requestType">The type of beltpack entries to request.</param>  
     public RequestBeltpackInformationRequest(BeltpackRequestType requestType) 
         : base(HCIMessageID.RequestBeltpackInformation)
     {

@@ -1,0 +1,436 @@
+@page "/dynamic"
+@using BeltpackManager.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.HCIRequests
+@using HCILibrary.Models
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject IConfiguration Configuration
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Dynamic Monitor</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Dynamic Monitor</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!isConnected && !loading)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center mb-2">
+                <MudText Typo="Typo.h5">Active Beltpacks</MudText>
+                <div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                                   OnClick="RefreshBeltpacksAsync" 
+                                   Disabled="!isConnected || loading"
+                                   Title="Refresh beltpacks" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   OnClick="ClearBeltpacks" 
+                                   Title="Clear table" />
+                </div>
+            </div>
+            <MudTable Items="@activeBeltpacks.Values.OrderBy(b => b.RoleNumber)" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true" 
+                      Loading="@loading"
+                      FixedHeader="true"
+                      Height="400px">
+                <HeaderContent>
+                    <MudTh>PMID</MudTh>
+                    <MudTh>Role</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Antenna</MudTh>
+                    <MudTh>Online Since</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="PMID">@context.PmidHex</MudTd>
+                    <MudTd DataLabel="Role">@context.RoleNumber</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@(context.IsOnline ? Color.Success : Color.Default)" Size="Size.Small">
+                            @(context.IsOnline ? "Online" : "Offline")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Antenna">@context.AntennaPort</MudTd>
+                    <MudTd DataLabel="Online Since">@(context.OnlineSince?.ToString("HH:mm:ss") ?? "-")</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>@(loading ? "Loading..." : "No active beltpacks")</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center mb-2">
+                <MudText Typo="Typo.h5">Event Log</MudText>
+                <div>
+                    <MudTextField @bind-Value="searchPhrase" 
+                                  Label="Filter phrase" 
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Dense"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Style="width: 200px;"
+                                  Class="mr-2" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   OnClick="ClearLog" 
+                                   Title="Clear log" />
+                    <MudSwitch @bind-Value="autoScroll" 
+                               Label="Auto-scroll" 
+                               Color="Color.Primary" 
+                               Class="ml-2" />
+                </div>
+            </div>
+            <div id="log-container" 
+                 style="height: 400px; overflow-y: auto; background-color: #1e1e1e; border-radius: 4px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px;"
+                 @ref="logContainer">
+                @foreach (var entry in GetFilteredLogEntries())
+                {
+                    <div style="color: @entry.Color; margin-bottom: 2px; white-space: pre-wrap;">
+                        <span style="color: #808080;">[@entry.Timestamp.ToString("HH:mm:ss.fff")]</span> @entry.Message
+                    </div>
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-2">Statistics</MudText>
+    <MudGrid>
+        <MudItem xs="3">
+            <MudText><strong>Total Events:</strong> @logEntries.Count</MudText>
+        </MudItem>
+        <MudItem xs="3">
+            <MudText><strong>Active Beltpacks:</strong> @activeBeltpacks.Values.Count(b => b.IsOnline)</MudText>
+        </MudItem>
+        <MudItem xs="3">
+            <MudText><strong>Total Tracked:</strong> @activeBeltpacks.Count</MudText>
+        </MudItem>
+        <MudItem xs="3">
+            <MudText><strong>Connected:</strong> @(isConnected ? "Yes" : "No")</MudText>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private bool loading = true;
+    private bool isConnected = false;
+    private string? errorMessage;
+    private bool autoScroll = true;
+    private string searchPhrase = string.Empty;
+    private ElementReference logContainer;
+
+    private Dictionary<uint, TrackedBeltpack> activeBeltpacks = new();
+    private List<LogEntry> logEntries = new();
+    private const int MaxLogEntries = 1000;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Subscribe to HCI messages
+            HCIService.MessageReceived += OnMessageReceived;
+            HCIService.ConnectionStateChanged += OnConnectionStateChanged;
+
+            // Connect and start listening
+            await ConnectAsync();
+        }
+
+        // Auto-scroll to bottom
+        if (autoScroll && logEntries.Count > 0)
+        {
+            try
+            {
+                await ScrollToBottom();
+            }
+            catch
+            {
+                // Ignore scroll errors
+            }
+        }
+    }
+
+    private async Task ConnectAsync()
+    {
+        try
+        {
+            var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+            AddLogEntry($"Connecting to matrix at {matrixIp}...", LogLevel.Info);
+
+            if (!HCIService.IsConnected)
+            {
+                isConnected = await HCIService.ConnectAsync(matrixIp);
+
+                if (!isConnected)
+                {
+                    errorMessage = $"Failed to connect to matrix at {matrixIp}";
+                    AddLogEntry($"Connection failed: {matrixIp}", LogLevel.Error);
+                    loading = false;
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+            }
+            else
+            {
+                isConnected = true;
+            }
+
+            AddLogEntry("Connected! Listening for HCI messages...", LogLevel.Success);
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+
+            // Request initial beltpack status
+            await RefreshBeltpacksAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Connection error: {ex.Message}";
+            AddLogEntry($"Error: {ex.Message}", LogLevel.Error);
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshBeltpacksAsync()
+    {
+        try
+        {
+            AddLogEntry("Requesting beltpack information...", LogLevel.Info);
+
+            var beltpackInfo = await HCIService.GetBeltpackInformationAsync();
+            if (beltpackInfo != null)
+            {
+                AddLogEntry($"Received {beltpackInfo.Count} beltpack(s) from matrix", LogLevel.Success);
+
+                foreach (var bp in beltpackInfo.Beltpacks)
+                {
+                    var tracked = GetOrCreateTrackedBeltpack(bp.Pmid);
+                    tracked.RoleNumber = bp.DefaultRole;
+                    tracked.SerialNumber = bp.SerialNumber.ToString();
+                    AddLogEntry($"Tracking beltpack: PMID={bp.Pmid:X5}, Role={bp.DefaultRole}, Mode={bp.Mode}", LogLevel.Info);
+                }
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            AddLogEntry($"Error refreshing beltpacks: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private void OnMessageReceived(object? sender, HCIReply reply)
+    {
+        try
+        {
+            // Handle Broadcast System Messages (Event messages)
+            if (reply.MessageID == HCIMessageID.BroadcastSystemMessage && reply.Event != null)
+            {
+                var eventClass = reply.Event.EventClass;
+                var level = eventClass switch
+                {
+                    HCIEventClass.FatalError => LogLevel.Error,
+                    HCIEventClass.NonFatalError => LogLevel.Error,
+                    HCIEventClass.Warning => LogLevel.Warning,
+                    HCIEventClass.Information => LogLevel.Info,
+                    HCIEventClass.Debug => LogLevel.Debug,
+                    _ => LogLevel.Info
+                };
+
+                AddLogEntry($"[{eventClass}] {reply.Event.Text}", level);
+
+                // Check for specific phrases (customize as needed)
+                if (!string.IsNullOrEmpty(searchPhrase) && 
+                    reply.Event.Text.Contains(searchPhrase, StringComparison.OrdinalIgnoreCase))
+                {
+                    AddLogEntry($"*** MATCH FOUND: {reply.Event.Text}", LogLevel.Highlight);
+                }
+            }
+
+            // Handle Beltpack Status messages
+            if (reply.MessageID == HCIMessageID.ReplyBeltpackStatus && reply.BeltpackStatus != null)
+            {
+                foreach (var entry in reply.BeltpackStatus.Entries)
+                {
+                    var tracked = GetOrCreateTrackedBeltpack(entry.Pmid);
+                    var wasOnline = tracked.IsOnline;
+
+                    tracked.IsOnline = entry.IsOnline;
+                    tracked.RoleNumber = entry.RoleNumber;
+                    tracked.AntennaPort = entry.AntennaPort;
+                    tracked.FrequencyType = entry.FrequencyDescription;
+                    tracked.WirelessMode = entry.IsFreeSpeak2 ? "FS2" : "FS1";
+                    tracked.LastUpdate = DateTime.Now;
+
+                    // Track online time
+                    if (entry.IsOnline && !wasOnline)
+                    {
+                        tracked.OnlineSince = DateTime.Now;
+                        AddLogEntry($"Beltpack ONLINE: PMID={entry.Pmid:X5}, Role={entry.RoleNumber}, Antenna={entry.AntennaPort}", LogLevel.Success);
+                    }
+                    else if (!entry.IsOnline && wasOnline)
+                    {
+                        var duration = tracked.OnlineSince.HasValue 
+                            ? DateTime.Now - tracked.OnlineSince.Value 
+                            : TimeSpan.Zero;
+                        AddLogEntry($"Beltpack OFFLINE: PMID={entry.Pmid:X5}, Role={entry.RoleNumber}, Duration={duration:hh\\:mm\\:ss}", LogLevel.Warning);
+                        tracked.OnlineSince = null;
+                    }
+                    else if (entry.IsOnline)
+                    {
+                        AddLogEntry($"Beltpack UPDATE: PMID={entry.Pmid:X5}, Role={entry.RoleNumber}, Antenna={entry.AntennaPort}", LogLevel.Info);
+                    }
+                }
+
+                InvokeAsync(StateHasChanged);
+            }
+
+            // Handle Role State messages (unsolicited updates)
+            if (reply.MessageID == HCIMessageID.ReplyRoleState && reply.RoleState != null)
+            {
+                foreach (var role in reply.RoleState.Roles)
+                {
+                    var statusDesc = role.AllocationStatus switch
+                    {
+                        RoleAllocationStatus.Free => "Free",
+                        RoleAllocationStatus.AllocatedFromPool => "Allocated (Pool)",
+                        RoleAllocationStatus.AllocatedFixed => "Allocated (Fixed)",
+                        _ => "Unknown"
+                    };
+                    AddLogEntry($"Role State: Role={role.RoleNumber}, Status={statusDesc}, Port={role.PhysicalPort}", LogLevel.Info);
+                }
+
+                InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLogEntry($"Error processing message: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private void OnConnectionStateChanged(object? sender, bool connected)
+    {
+        isConnected = connected;
+        AddLogEntry(connected ? "Connection established" : "Connection lost", connected ? LogLevel.Success : LogLevel.Error);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private TrackedBeltpack GetOrCreateTrackedBeltpack(uint pmid)
+    {
+        if (!activeBeltpacks.TryGetValue(pmid, out var tracked))
+        {
+            tracked = new TrackedBeltpack { Pmid = pmid };
+            activeBeltpacks[pmid] = tracked;
+        }
+        return tracked;
+    }
+
+    private void AddLogEntry(string message, LogLevel level)
+    {
+        var entry = new LogEntry
+        {
+            Timestamp = DateTime.Now,
+            Message = message,
+            Level = level,
+            Color = level switch
+            {
+                LogLevel.Error => "#ff6b6b",
+                LogLevel.Warning => "#ffd93d",
+                LogLevel.Success => "#6bcb77",
+                LogLevel.Info => "#4d96ff",
+                LogLevel.Debug => "#808080",
+                LogLevel.Highlight => "#ff00ff",
+                _ => "#ffffff"
+            }
+        };
+
+        logEntries.Add(entry);
+
+        // Trim log if too large
+        while (logEntries.Count > MaxLogEntries)
+        {
+            logEntries.RemoveAt(0);
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<LogEntry> GetFilteredLogEntries()
+    {
+        if (string.IsNullOrWhiteSpace(searchPhrase))
+            return logEntries;
+
+        return logEntries.Where(e => 
+            e.Message.Contains(searchPhrase, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task ScrollToBottom()
+    {
+        // JavaScript interop would be needed for true auto-scroll
+        // For now, we rely on CSS and the browser's default behavior
+        await Task.CompletedTask;
+    }
+
+    private void ClearLog()
+    {
+        logEntries.Clear();
+        AddLogEntry("Log cleared", LogLevel.Info);
+    }
+
+    private void ClearBeltpacks()
+    {
+        activeBeltpacks.Clear();
+        AddLogEntry("Beltpack table cleared", LogLevel.Info);
+    }
+
+    public void Dispose()
+    {
+        HCIService.MessageReceived -= OnMessageReceived;
+        HCIService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+
+    public class TrackedBeltpack
+    {
+        public uint Pmid { get; set; }
+        public string PmidHex => $"{Pmid:X5}";
+        public string SerialNumber { get; set; } = string.Empty;
+        public ushort RoleNumber { get; set; }
+        public ushort AntennaPort { get; set; }
+        public bool IsOnline { get; set; }
+        public string FrequencyType { get; set; } = string.Empty;
+        public string WirelessMode { get; set; } = string.Empty;
+        public DateTime? OnlineSince { get; set; }
+        public DateTime LastUpdate { get; set; } = DateTime.Now;
+    }
+
+    public class LogEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public LogLevel Level { get; set; }
+        public string Color { get; set; } = "#ffffff";
+    }
+
+    public enum LogLevel
+    {
+        Debug,
+        Info,
+        Success,
+        Warning,
+        Error,
+        Highlight
+    }
+}

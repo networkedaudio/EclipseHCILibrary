@@ -184,40 +184,81 @@ public class ReplyPeripheralInfo
     public List<PeripheralInfoEntry> Entries { get; set; } = new();
 
     /// <summary>
-    /// Parses a Reply Peripheral Info response from the payload bytes.
+    /// HCIv2 protocol tag marker.
     /// </summary>
-    /// <param name="payload">The payload bytes (starting at protocol tag).</param>
+    private static readonly byte[] ProtocolTag = { 0xAB, 0xBA, 0xCE, 0xDE };
+
+    /// <summary>
+    /// Parses a Reply Peripheral Info response from the payload bytes.
+    /// Handles both cases: payload with or without protocol tag prefix.
+    /// </summary>
+    /// <param name="payload">The payload bytes.</param>
     /// <returns>The parsed response, or null if parsing fails.</returns>
     public static ReplyPeripheralInfo? Parse(byte[] payload)
     {
-        // Minimum payload: ProtocolTag(4) + ProtocolSchema(1) + SubType(1) + SlotNumber(1) + Count(2) = 9 bytes
-        if (payload == null || payload.Length < 9)
+        if (payload == null || payload.Length < 3)
         {
+            Console.WriteLine($"[ReplyPeripheralInfo] Payload too short: {payload?.Length ?? 0} bytes");
             return null;
         }
+
+        Console.WriteLine($"[ReplyPeripheralInfo] RAW PAYLOAD ({payload.Length} bytes): {BitConverter.ToString(payload)}");
 
         int offset = 0;
         var result = new ReplyPeripheralInfo();
 
-        // Protocol Tag (4 bytes, 0xABBACEDE) - skip, already validated
-        offset += 4;
+        // Check if payload starts with protocol tag (AB BA CE DE)
+        if (payload.Length >= 9 &&
+            payload[0] == ProtocolTag[0] &&
+            payload[1] == ProtocolTag[1] &&
+            payload[2] == ProtocolTag[2] &&
+            payload[3] == ProtocolTag[3])
+        {
+            Console.WriteLine($"[ReplyPeripheralInfo] Protocol tag detected, skipping 4 bytes");
+            offset = 4; // Skip protocol tag
 
-        // Protocol Schema (1 byte)
-        result.ProtocolSchema = payload[offset++];
+            // Protocol Schema (1 byte)
+            result.ProtocolSchema = payload[offset++];
+        }
+        else
+        {
+            Console.WriteLine($"[ReplyPeripheralInfo] No protocol tag, starting at offset 0");
+        }
 
         // Sub Type (1 byte) - should be 0x15
+        if (offset >= payload.Length)
+        {
+            Console.WriteLine($"[ReplyPeripheralInfo] Not enough bytes for sub type");
+            return null;
+        }
+
         byte subType = payload[offset++];
+        Console.WriteLine($"[ReplyPeripheralInfo] Sub type: 0x{subType:X2} (expected 0x{SubType:X2})");
+
         if (subType != SubType)
         {
+            Console.WriteLine($"[ReplyPeripheralInfo] Sub type mismatch, expected 0x{SubType:X2}");
             return null;
         }
 
         // Slot Number (1 byte)
+        if (offset >= payload.Length)
+        {
+            Console.WriteLine($"[ReplyPeripheralInfo] Not enough bytes for slot number");
+            return null;
+        }
         result.RequestedSlotNumber = payload[offset++];
 
         // Count (2 bytes, big-endian)
+        if (offset + 2 > payload.Length)
+        {
+            Console.WriteLine($"[ReplyPeripheralInfo] Not enough bytes for count");
+            return null;
+        }
         result.Count = (ushort)((payload[offset] << 8) | payload[offset + 1]);
         offset += 2;
+
+        Console.WriteLine($"[ReplyPeripheralInfo] Slot={result.RequestedSlotNumber}, Count={result.Count}");
 
         // Parse each entry
         for (int i = 0; i < result.Count; i++)
@@ -225,11 +266,13 @@ public class ReplyPeripheralInfo
             var entry = ParseEntry(payload, ref offset);
             if (entry == null)
             {
+                Console.WriteLine($"[ReplyPeripheralInfo] Failed to parse entry {i}");
                 break;
             }
             result.Entries.Add(entry);
         }
 
+        Console.WriteLine($"[ReplyPeripheralInfo] Parsed {result.Entries.Count} entries");
         return result;
     }
 
@@ -242,6 +285,7 @@ public class ReplyPeripheralInfo
         // PMID(4) + NumberOfVersionStrings(1) = 56 bytes minimum
         if (payload.Length < offset + 56)
         {
+            Console.WriteLine($"[ReplyPeripheralInfo] Not enough bytes for entry at offset {offset}, need 56, have {payload.Length - offset}");
             return null;
         }
 

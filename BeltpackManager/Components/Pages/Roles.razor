@@ -1,0 +1,371 @@
+@page "/roles"
+@using BeltpackManager.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.HCIRequests
+@using HCILibrary.Models
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject IConfiguration Configuration
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Roles</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Roles</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(debugMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">@debugMessage</MudAlert>
+}
+
+@if (!isConnected && !loading)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div></div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshRolesAsync" Disabled="!isConnected || loading">
+        Refresh
+    </MudButton>
+</div>
+
+<MudTable Items="@editableRoles" Hover="true" Striped="true" Dense="false" Loading="@loading">
+    <HeaderContent>
+        <MudTh>Role Number</MudTh>
+        <MudTh>Allocation Status</MudTh>
+        <MudTh>Physical Port</MudTh>
+        <MudTh>Configured Endpoint</MudTh>
+        <MudTh>Physical Endpoint</MudTh>
+        <MudTh Style="width: 120px;">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Role Number">@context.RoleNumber</MudTd>
+        <MudTd DataLabel="Allocation Status">
+            <MudSelect T="RoleAllocationStatus" 
+                       Value="@context.AllocationStatus" 
+                       ValueChanged="@(value => OnAllocationStatusChanged(context, value))"
+                       Variant="Variant.Outlined" 
+                       Margin="Margin.Dense"
+                       Dense="true"
+                       Style="min-width: 180px;">
+                <MudSelectItem Value="RoleAllocationStatus.Free">Free</MudSelectItem>
+                <MudSelectItem Value="RoleAllocationStatus.AllocatedFromPool">Allocated From Pool</MudSelectItem>
+                <MudSelectItem Value="RoleAllocationStatus.AllocatedFixed">Allocated Fixed</MudSelectItem>
+            </MudSelect>
+        </MudTd>
+        <MudTd DataLabel="Physical Port">
+            <MudNumericField T="ushort" 
+                             Value="@context.PhysicalPort" 
+                             ValueChanged="@(value => OnPhysicalPortChanged(context, value))"
+                             Variant="Variant.Outlined" 
+                             Margin="Margin.Dense"
+                             Min="0"
+                             Max="65534"
+                             Style="max-width: 100px;"
+                             Disabled="@(context.AllocationStatus == RoleAllocationStatus.Free)" />
+        </MudTd>
+        <MudTd DataLabel="Configured Endpoint">@(context.ConfiguredEndpointType > 0 ? context.ConfiguredEndpointType.ToString() : "-")</MudTd>
+        <MudTd DataLabel="Physical Endpoint">@(context.PhysicalEndpointType > 0 ? context.PhysicalEndpointType.ToString() : "-")</MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Save" 
+                           Color="@(context.HasChanges ? Color.Primary : Color.Default)" 
+                           Size="Size.Small" 
+                           OnClick="@(() => UpdateRoleAsync(context))"
+                           Disabled="@(!context.HasChanges || updating)"
+                           Title="Update this role" />
+            <MudIconButton Icon="@Icons.Material.Filled.Undo" 
+                           Color="Color.Default" 
+                           Size="Size.Small" 
+                           OnClick="@(() => ResetRole(context))"
+                           Disabled="@(!context.HasChanges)"
+                           Title="Reset changes" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>@(loading ? "Loading roles..." : "No roles found")</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private bool loading = true;
+    private bool isConnected = false;
+    private bool updating = false;
+    private string? errorMessage;
+    private string? debugMessage;
+    private List<RoleStateEntry> roles = new();
+    private List<EditableRoleEntry> editableRoles = new();
+    private bool firstRender = true;
+
+    protected override void OnInitialized()
+    {
+        // Don't do async work here - it blocks rendering
+        // Just set up initial state
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            this.firstRender = false;
+
+            // Now load data asynchronously without blocking the UI
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ConnectAndLoadAsync();
+                }
+                catch (Exception ex)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Error: {ex.Message}";
+                        loading = false;
+                        StateHasChanged();
+                    });
+                }
+            });
+        }
+    }
+
+    private async Task ConnectAndLoadAsync()
+    {
+        try
+        {
+            // Get matrix IP from configuration
+            var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = $"Connecting to matrix at {matrixIp}...";
+                StateHasChanged();
+            });
+
+            // Connect to matrix if not already connected
+            if (!HCIService.IsConnected)
+            {
+                isConnected = await HCIService.ConnectAsync(matrixIp);
+
+                if (!isConnected)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        errorMessage = $"Failed to connect to matrix at {matrixIp}";
+                        debugMessage = null;
+                        loading = false;
+                        StateHasChanged();
+                    });
+                    return;
+                }
+            }
+            else
+            {
+                isConnected = true;
+            }
+
+            await InvokeAsync(() =>
+            {
+                debugMessage = "Connected! Requesting role information...";
+                StateHasChanged();
+            });
+
+            await LoadRolesAsync();
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error during connection: {ex.Message}";
+                debugMessage = null;
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            Console.WriteLine("[Roles] Requesting roles via HCI...");
+
+            var roleStateReply = await HCIService.GetRolesAsync();
+
+            await InvokeAsync(() =>
+            {
+                if (roleStateReply != null && roleStateReply.Roles.Count > 0)
+                {
+                    roles = roleStateReply.Roles;
+                    editableRoles = roles.Select(r => new EditableRoleEntry(r)).ToList();
+                    debugMessage = $"Loaded {roles.Count} role(s)";
+                }
+                else
+                {
+                    roles = new List<RoleStateEntry>();
+                    editableRoles = new List<EditableRoleEntry>();
+                    debugMessage = "No roles returned from matrix";
+                }
+
+                loading = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Error loading roles: {ex.Message}";
+                debugMessage = $"Stack trace: {ex.StackTrace}";
+                loading = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private Color GetStatusColor(RoleAllocationStatus status)
+    {
+        return status switch
+        {
+            RoleAllocationStatus.AllocatedFixed => Color.Success,
+            RoleAllocationStatus.AllocatedFromPool => Color.Info,
+            RoleAllocationStatus.Free => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private void OnAllocationStatusChanged(EditableRoleEntry role, RoleAllocationStatus newStatus)
+    {
+        role.AllocationStatus = newStatus;
+
+        // If setting to Free, reset the physical port to 0xFFFF
+        if (newStatus == RoleAllocationStatus.Free)
+        {
+            role.PhysicalPort = 0xFFFF;
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnPhysicalPortChanged(EditableRoleEntry role, ushort newPort)
+    {
+        role.PhysicalPort = newPort;
+        StateHasChanged();
+    }
+
+    private void ResetRole(EditableRoleEntry role)
+    {
+        role.Reset();
+        StateHasChanged();
+    }
+
+    private async Task UpdateRoleAsync(EditableRoleEntry role)
+    {
+        try
+        {
+            updating = true;
+            errorMessage = null;
+            debugMessage = $"Updating role {role.RoleNumber}...";
+            StateHasChanged();
+
+            var result = await HCIService.UpdateRoleStateAsync(
+                role.RoleNumber, 
+                role.AllocationStatus, 
+                role.PhysicalPort);
+
+            if (result != null && result.Success)
+            {
+                // Update the original values to reflect the confirmed state
+                role.OriginalAllocationStatus = result.CurrentStatus;
+                role.OriginalPhysicalPort = result.PhysicalPort;
+                role.AllocationStatus = result.CurrentStatus;
+                role.PhysicalPort = result.PhysicalPort;
+
+                debugMessage = $"Role {role.RoleNumber} updated successfully!";
+            }
+            else
+            {
+                // Get detailed error message from the result
+                if (result != null)
+                {
+                    errorMessage = result.GetErrorMessage();
+                }
+                else
+                {
+                    errorMessage = "Failed to update role: No response from matrix";
+                }
+
+                // Reset to original values on failure
+                role.Reset();
+            }
+
+            updating = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating role: {ex.Message}";
+            updating = false;
+            role.Reset();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshRolesAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        debugMessage = "Refreshing roles...";
+        StateHasChanged();
+
+        await LoadRolesAsync();
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+
+    /// <summary>
+    /// Wrapper class for RoleStateEntry that tracks changes for editing.
+    /// </summary>
+    public class EditableRoleEntry
+    {
+        public ushort RoleNumber { get; set; }
+        public RoleAllocationStatus AllocationStatus { get; set; }
+        public ushort PhysicalPort { get; set; }
+        public ushort ConfiguredEndpointType { get; set; }
+        public ushort PhysicalEndpointType { get; set; }
+
+        // Original values to track changes
+        public RoleAllocationStatus OriginalAllocationStatus { get; set; }
+        public ushort OriginalPhysicalPort { get; set; }
+
+        public bool HasChanges => AllocationStatus != OriginalAllocationStatus || PhysicalPort != OriginalPhysicalPort;
+
+        public EditableRoleEntry(RoleStateEntry entry)
+        {
+            RoleNumber = entry.RoleNumber;
+            AllocationStatus = entry.AllocationStatus;
+            PhysicalPort = entry.PhysicalPort;
+            ConfiguredEndpointType = entry.ConfiguredEndpointType;
+            PhysicalEndpointType = entry.PhysicalEndpointType;
+
+            // Store original values
+            OriginalAllocationStatus = entry.AllocationStatus;
+            OriginalPhysicalPort = entry.PhysicalPort;
+        }
+
+        public void Reset()
+        {
+            AllocationStatus = OriginalAllocationStatus;
+            PhysicalPort = OriginalPhysicalPort;
+        }
+    }
+}
