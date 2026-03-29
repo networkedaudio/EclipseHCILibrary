@@ -94,9 +94,10 @@ public class RequestRoleStateSetRequest : HCIRequest
         // Protocol Schema: 1 byte
         payload[offset++] = ProtocolSchema;
 
-        // Role: 2 bytes (big-endian)
-        payload[offset++] = (byte)(Role >> 8);
-        payload[offset++] = (byte)(Role & 0xFF);
+        // Role: 2 bytes (big-endian) - convert 1-indexed to 0-indexed for the frame
+        ushort zeroIndexedRole = Role > 0 ? (ushort)(Role - 1) : (ushort)0;
+        payload[offset++] = (byte)(zeroIndexedRole >> 8);
+        payload[offset++] = (byte)(zeroIndexedRole & 0xFF);
 
         // New Status: 1 byte
         payload[offset++] = (byte)NewStatus;

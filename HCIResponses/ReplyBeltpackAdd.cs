@@ -60,6 +60,17 @@ public class ReplyBeltpackAdd
     public bool IsSuccess => Result == BeltpackAddResult.Success;
 
     /// <summary>
+    /// Gets a human-readable description of the result.
+    /// </summary>
+    public string ResultDescription => Result switch
+    {
+        BeltpackAddResult.Success => "Success",
+        BeltpackAddResult.StoreFull => "Store Full \u2014 the matrix beltpack store has no more capacity",
+        BeltpackAddResult.InvalidRequest => "Invalid Request \u2014 the matrix rejected the add request",
+        _ => $"Unknown result ({(byte)Result})"
+    };
+
+    /// <summary>
     /// Decodes the payload into a ReplyBeltpackAdd.
     /// </summary>
     /// <param name="payload">The payload bytes (after protocol tag and schema have been stripped).</param>

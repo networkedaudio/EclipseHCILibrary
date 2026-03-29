@@ -118,7 +118,7 @@ public class RequestBeltpackAddRequest : HCIRequest
     /// <param name="serialNumber">The serial number of the beltpack.</param>
     /// <param name="pmid">The PMID of the beltpack.</param>
     /// <param name="name">The name of the beltpack.</param>
-    /// <param name="role">The fixed role to assign (1-indexed, will be converted to 0-indexed for protocol).</param>
+    /// <param name="role">The fixed role to assign (actual role ID, e.g. 600-799).</param>
     /// <returns>A configured request to add a fixed role beltpack.</returns>
     public static RequestBeltpackAddRequest FixedRoleMode(uint serialNumber, uint pmid, string name, ushort role)
     {
@@ -131,13 +131,11 @@ public class RequestBeltpackAddRequest : HCIRequest
     /// <param name="serialNumber">The serial number of the beltpack.</param>
     /// <param name="pmid">The PMID of the beltpack.</param>
     /// <param name="name">The name of the beltpack.</param>
-    /// <param name="role">The preferred role.</param>
+    /// <param name="role">The preferred role (actual role ID, e.g. 600-799).</param>
     /// <returns>A configured request to add a preferred role beltpack.</returns>
     public static RequestBeltpackAddRequest PreferredRoleMode(uint serialNumber, uint pmid, string name, ushort role)
     {
-        // Convert 1-indexed role to 0-indexed for the matrix
-        ushort zeroIndexedRole = role > 0 ? (ushort)(role - 1) : (ushort)0;
-        return new RequestBeltpackAddRequest(serialNumber, pmid, name, BeltpackConfigMode.PreferredRole, zeroIndexedRole);
+        return new RequestBeltpackAddRequest(serialNumber, pmid, name, BeltpackConfigMode.PreferredRole, role);
     }
 
     /// <summary>
@@ -159,14 +157,12 @@ public class RequestBeltpackAddRequest : HCIRequest
     /// <param name="serialNumber">The serial number of the beltpack.</param>
     /// <param name="pmid">The PMID of the beltpack.</param>
     /// <param name="name">The name of the beltpack.</param>
-    /// <param name="role">The preferred role (1-indexed, will be converted to 0-indexed for protocol).</param>
+    /// <param name="role">The preferred role (actual role ID, e.g. 600-799).</param>
     /// <param name="roleTeam">The preferred role team.</param>
     /// <returns>A configured request to add a preferred role and team beltpack.</returns>
     public static RequestBeltpackAddRequest PreferredRoleAndTeamMode(uint serialNumber, uint pmid, string name, ushort role, byte roleTeam)
     {
-        // Convert 1-indexed role to 0-indexed for the matrix
-        ushort zeroIndexedRole = role > 0 ? (ushort)(role - 1) : (ushort)0;
-        return new RequestBeltpackAddRequest(serialNumber, pmid, name, BeltpackConfigMode.PreferredRoleAndTeam, zeroIndexedRole, roleTeam);
+        return new RequestBeltpackAddRequest(serialNumber, pmid, name, BeltpackConfigMode.PreferredRoleAndTeam, role, roleTeam);
     }
 
     /// <inheritdoc/>
@@ -202,9 +198,10 @@ public class RequestBeltpackAddRequest : HCIRequest
         Array.Copy(nameBytes, 0, payload, offset, nameBytesToCopy);
         offset += MaxNameLength;
 
-        // Role: 2 bytes (big-endian)
-        payload[offset++] = (byte)(Role >> 8);
-        payload[offset++] = (byte)(Role & 0xFF);
+        // Role: 2 bytes (big-endian) - convert 1-indexed to 0-indexed for the frame
+        ushort zeroIndexedRole = Role > 0 ? (ushort)(Role - 1) : (ushort)0;
+        payload[offset++] = (byte)(zeroIndexedRole >> 8);
+        payload[offset++] = (byte)(zeroIndexedRole & 0xFF);
 
         // Mode: 1 byte
         payload[offset++] = (byte)Mode;

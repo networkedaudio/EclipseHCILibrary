@@ -61,9 +61,10 @@ public class RequestRoleStateRequest : HCIRequest
         // Protocol Schema: 1 byte
         ms.WriteByte(0x01);
 
-        // Role: 2 bytes (big-endian)
-        ms.WriteByte((byte)(Role >> 8));
-        ms.WriteByte((byte)(Role & 0xFF));
+        // Role: 2 bytes (big-endian) - convert 1-indexed to 0-indexed for the frame (0xFFFF = all roles, no conversion)
+        ushort protocolRole = (Role != AllRoles && Role > 0) ? (ushort)(Role - 1) : Role;
+        ms.WriteByte((byte)(protocolRole >> 8));
+        ms.WriteByte((byte)(protocolRole & 0xFF));
 
         return ms.ToArray();
     }

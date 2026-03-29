@@ -4,6 +4,7 @@
 @using HCILibrary.HCIRequests
 @using HCILibrary.Models
 @using HCILibrary.Enums
+@using System.Diagnostics
 @inject HCIService HCIService
 @inject IConfiguration Configuration
 @rendermode InteractiveServer
@@ -21,6 +22,34 @@
 @if (!isConnected && !loading)
 {
     <MudAlert Severity="Severity.Warning" Class="mb-4">Not connected to matrix</MudAlert>
+}
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div></div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="@(bulkAddRunning ? Variant.Filled : Variant.Outlined)"
+                   Color="@(bulkAddRunning ? Color.Warning : Color.Secondary)"
+                   OnClick="BulkAddTestAsync"
+                   Disabled="!isConnected || loading || bulkAddRunning"
+                   StartIcon="@Icons.Material.Filled.PlaylistAdd">
+            @(bulkAddRunning ? $"Adding... {bulkAddProgress}/200" : "Bulk Add 200 (Test)")
+        </MudButton>
+        <MudButton Variant="@(acceptAllActive ? Variant.Filled : Variant.Outlined)" 
+                   Color="@(acceptAllActive ? Color.Success : Color.Default)" 
+                   OnClick="ToggleAcceptAll" 
+                   Disabled="!isConnected || loading"
+                   StartIcon="@(acceptAllActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.AddCircleOutline)">
+            @(acceptAllActive ? "Accepting Beltpacks..." : "Accept All Beltpacks")
+        </MudButton>
+    </div>
+</div>
+
+@if (acceptAllActive)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        Watching for new beltpack Pin Check messages. New beltpacks will be automatically added with a fixed role assignment.
+        <strong>@acceptedCount</strong> beltpack(s) accepted so far.
+    </MudAlert>
 }
 
 <MudGrid>
@@ -136,6 +165,17 @@
     private List<LogEntry> logEntries = new();
     private const int MaxLogEntries = 1000;
 
+    // Bulk add test feature
+    private bool bulkAddRunning = false;
+    private int bulkAddProgress = 0;
+
+    // Accept all beltpacks feature
+    private bool acceptAllActive = false;
+    private int acceptedCount = 0;
+    private HashSet<uint> knownSerials = new();
+    private HashSet<uint> pendingSerials = new();
+    private List<RoleStateEntry> availableRoles = new();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -167,11 +207,13 @@
         try
         {
             var matrixIp = Configuration["MatrixIP"] ?? "192.168.1.100";
+            Debug.WriteLine($"[Dynamic] ConnectAsync called. MatrixIP={matrixIp}, HCIService.IsConnected={HCIService.IsConnected}");
             AddLogEntry($"Connecting to matrix at {matrixIp}...", LogLevel.Info);
 
             if (!HCIService.IsConnected)
             {
                 isConnected = await HCIService.ConnectAsync(matrixIp);
+                Debug.WriteLine($"[Dynamic] ConnectAsync result: isConnected={isConnected}");
 
                 if (!isConnected)
                 {
@@ -185,13 +227,18 @@
             else
             {
                 isConnected = true;
+                Debug.WriteLine($"[Dynamic] Already connected, skipping ConnectAsync");
             }
 
             AddLogEntry("Connected! Listening for HCI messages...", LogLevel.Success);
             loading = false;
             await InvokeAsync(StateHasChanged);
 
+            // Load known beltpacks and roles for accept-all feature
+            await LoadKnownBeltpacksAndRolesAsync();
+
             // Request initial beltpack status
+            Debug.WriteLine($"[Dynamic] About to call RefreshBeltpacksAsync");
             await RefreshBeltpacksAsync();
         }
         catch (Exception ex)
@@ -207,26 +254,48 @@
     {
         try
         {
-            AddLogEntry("Requesting beltpack information...", LogLevel.Info);
+            Debug.WriteLine($"[Dynamic] RefreshBeltpacksAsync called. activeBeltpacks.Count={activeBeltpacks.Count}");
+            AddLogEntry("Requesting beltpack status...", LogLevel.Info);
 
-            var beltpackInfo = await HCIService.GetBeltpackInformationAsync();
-            if (beltpackInfo != null)
+            var beltpackStatus = await HCIService.GetBeltpackStatusAsync();
+            Debug.WriteLine($"[Dynamic] GetBeltpackStatusAsync returned: {(beltpackStatus == null ? "null" : $"Entries.Count={beltpackStatus.Entries.Count}")}");
+
+            if (beltpackStatus != null)
             {
-                AddLogEntry($"Received {beltpackInfo.Count} beltpack(s) from matrix", LogLevel.Success);
+                AddLogEntry($"Received {beltpackStatus.Entries.Count} beltpack status entries from matrix", LogLevel.Success);
 
-                foreach (var bp in beltpackInfo.Beltpacks)
+                foreach (var entry in beltpackStatus.Entries)
                 {
-                    var tracked = GetOrCreateTrackedBeltpack(bp.Pmid);
-                    tracked.RoleNumber = bp.DefaultRole;
-                    tracked.SerialNumber = bp.SerialNumber.ToString();
-                    AddLogEntry($"Tracking beltpack: PMID={bp.Pmid:X5}, Role={bp.DefaultRole}, Mode={bp.Mode}", LogLevel.Info);
+                    Debug.WriteLine($"[Dynamic] Processing status entry: PMID=0x{entry.Pmid:X5}, Role={entry.RoleNumber}, Online={entry.IsOnline}, Antenna={entry.AntennaPort}");
+                    var tracked = GetOrCreateTrackedBeltpack(entry.Pmid);
+                    tracked.IsOnline = entry.IsOnline;
+                    tracked.RoleNumber = entry.RoleNumber;
+                    tracked.AntennaPort = entry.AntennaPort;
+                    tracked.FrequencyType = entry.FrequencyDescription;
+                    tracked.WirelessMode = entry.IsFreeSpeak2 ? "FS2" : "FS1";
+                    tracked.LastUpdate = DateTime.Now;
+
+                    if (entry.IsOnline)
+                    {
+                        tracked.OnlineSince ??= DateTime.Now;
+                    }
+
+                    AddLogEntry($"Beltpack: PMID={entry.Pmid:X5}, Role={entry.RoleNumber}, {(entry.IsOnline ? "Online" : "Offline")}, Antenna={entry.AntennaPort}", LogLevel.Info);
                 }
+
+                Debug.WriteLine($"[Dynamic] After processing: activeBeltpacks.Count={activeBeltpacks.Count}");
+            }
+            else
+            {
+                Debug.WriteLine($"[Dynamic] GetBeltpackStatusAsync returned null!");
+                AddLogEntry("No beltpack status received", LogLevel.Warning);
             }
 
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"[Dynamic] RefreshBeltpacksAsync EXCEPTION: {ex}");
             AddLogEntry($"Error refreshing beltpacks: {ex.Message}", LogLevel.Error);
         }
     }
@@ -235,6 +304,8 @@
     {
         try
         {
+            Debug.WriteLine($"[Dynamic] OnMessageReceived: MessageID=0x{(int)reply.MessageID:X4} ({reply.MessageID}), Flags={reply.Flags}, BeltpackStatus={reply.BeltpackStatus != null}, Event={reply.Event != null}");
+
             // Handle Broadcast System Messages (Event messages)
             if (reply.MessageID == HCIMessageID.BroadcastSystemMessage && reply.Event != null)
             {
@@ -251,6 +322,12 @@
 
                 AddLogEntry($"[{eventClass}] {reply.Event.Text}", level);
 
+                // Accept all beltpacks: watch for Pin Check messages
+                if (acceptAllActive && reply.Event.Text.Contains("Pin Check", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = Task.Run(() => HandlePinCheckMessageAsync(reply.Event.Text));
+                }
+
                 // Check for specific phrases (customize as needed)
                 if (!string.IsNullOrEmpty(searchPhrase) && 
                     reply.Event.Text.Contains(searchPhrase, StringComparison.OrdinalIgnoreCase))
@@ -262,6 +339,7 @@
             // Handle Beltpack Status messages
             if (reply.MessageID == HCIMessageID.ReplyBeltpackStatus && reply.BeltpackStatus != null)
             {
+                Debug.WriteLine($"[Dynamic] OnMessageReceived: BeltpackStatus with {reply.BeltpackStatus.Entries.Count} entries, M={reply.Flags.M}");
                 foreach (var entry in reply.BeltpackStatus.Entries)
                 {
                     var tracked = GetOrCreateTrackedBeltpack(entry.Pmid);
@@ -398,8 +476,206 @@
 
     public void Dispose()
     {
+        acceptAllActive = false;
         HCIService.MessageReceived -= OnMessageReceived;
         HCIService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+
+    private async Task BulkAddTestAsync()
+    {
+        bulkAddRunning = true;
+        bulkAddProgress = 0;
+        int succeeded = 0;
+        int failed = 0;
+
+        AddLogEntry("Starting bulk add test: 200 beltpacks, serial 1000-1199, Pool mode", LogLevel.Highlight);
+
+        try
+        {
+            for (int i = 0; i < 200; i++)
+            {
+                uint serial = (uint)(1000 + i);
+                string name = $"Beltpack {serial}";
+                if (name.Length > 15)
+                    name = name[..15];
+
+                var request = RequestBeltpackAddRequest.PoolMode(serial, serial, name);
+                var result = await HCIService.AddBeltpackAsync(request);
+
+                bulkAddProgress = i + 1;
+
+                if (result != null && result.IsSuccess)
+                {
+                    succeeded++;
+                    if (bulkAddProgress % 10 == 0)
+                        AddLogEntry($"Bulk add progress: {bulkAddProgress}/200 ({succeeded} ok, {failed} failed)", LogLevel.Info);
+                }
+                else
+                {
+                    failed++;
+                    var reason = result?.ResultDescription ?? "No response";
+                    AddLogEntry($"Bulk add #{bulkAddProgress} failed (serial {serial}): {reason}", LogLevel.Error);
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+
+            AddLogEntry($"Bulk add complete: {succeeded} succeeded, {failed} failed out of 200", succeeded == 200 ? LogLevel.Success : LogLevel.Warning);
+        }
+        catch (Exception ex)
+        {
+            AddLogEntry($"Bulk add error at #{bulkAddProgress}: {ex.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            bulkAddRunning = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ToggleAcceptAll()
+    {
+        acceptAllActive = !acceptAllActive;
+
+        if (acceptAllActive)
+        {
+            acceptedCount = 0;
+            pendingSerials.Clear();
+            await LoadKnownBeltpacksAndRolesAsync();
+            AddLogEntry($"Accept All Beltpacks ENABLED. {knownSerials.Count} known serial(s), {availableRoles.Count(r => r.AllocationStatus == RoleAllocationStatus.Free)} free role(s).", LogLevel.Success);
+        }
+        else
+        {
+            AddLogEntry("Accept All Beltpacks DISABLED.", LogLevel.Warning);
+        }
+    }
+
+    private async Task LoadKnownBeltpacksAndRolesAsync()
+    {
+        try
+        {
+            knownSerials.Clear();
+
+            // Load Map/OTA beltpacks
+            var mapOta = await HCIService.GetMapOtaBeltpacksAsync();
+            if (mapOta != null)
+            {
+                foreach (var bp in mapOta.Beltpacks)
+                    knownSerials.Add(bp.SerialNumber);
+            }
+
+            await Task.Delay(500);
+
+            // Load HCI-added beltpacks
+            var hci = await HCIService.GetHciAddedBeltpacksAsync();
+            if (hci != null)
+            {
+                foreach (var bp in hci.Beltpacks)
+                    knownSerials.Add(bp.SerialNumber);
+            }
+
+            await Task.Delay(500);
+
+            // Load available roles
+            var roleState = await HCIService.GetRolesAsync();
+            if (roleState != null)
+            {
+                availableRoles = roleState.Roles.OrderBy(r => r.RoleNumber).ToList();
+            }
+
+            AddLogEntry($"Loaded {knownSerials.Count} known beltpack(s) and {availableRoles.Count} role(s) ({availableRoles.Count(r => r.AllocationStatus == RoleAllocationStatus.Free)} free)", LogLevel.Info);
+        }
+        catch (Exception ex)
+        {
+            AddLogEntry($"Error loading beltpacks/roles: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private (uint pmid, uint serial)? ParsePinCheckMessage(string text)
+    {
+        // Format: PP:049FC(018940) 000 Pin Check ,OPEN
+        // PMID is hex after "PP:", serial is decimal in parentheses
+        var match = System.Text.RegularExpressions.Regex.Match(
+            text, @"PP:([0-9A-Fa-f]+)\((\d+)\).*Pin Check");
+
+        if (!match.Success)
+            return null;
+
+        if (uint.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber, null, out uint pmid) &&
+            uint.TryParse(match.Groups[2].Value, out uint serial))
+        {
+            return (pmid, serial);
+        }
+
+        return null;
+    }
+
+    private async Task HandlePinCheckMessageAsync(string text)
+    {
+        try
+        {
+            var parsed = ParsePinCheckMessage(text);
+            if (parsed == null)
+                return;
+
+            var (pmid, serial) = parsed.Value;
+
+            // Skip if already known or already being processed
+            if (knownSerials.Contains(serial))
+                return;
+
+            lock (pendingSerials)
+            {
+                if (!pendingSerials.Add(serial))
+                    return; // Already being processed
+            }
+
+            try
+            {
+                // Find next free role
+                var freeRole = availableRoles.FirstOrDefault(r => r.AllocationStatus == RoleAllocationStatus.Free);
+                if (freeRole == null)
+                {
+                    AddLogEntry($"No free roles available for beltpack serial {serial:D6} (PMID {pmid:X5})", LogLevel.Error);
+                    return;
+                }
+
+                var roleName = $"BP{serial:D6}";
+                if (roleName.Length > 15)
+                    roleName = roleName[..15];
+
+                AddLogEntry($"Auto-adding beltpack: Serial={serial:D6}, PMID={pmid:X8}, Role={freeRole.RoleNumber}, Name={roleName}", LogLevel.Highlight);
+
+                var request = RequestBeltpackAddRequest.FixedRoleMode(serial, serial, roleName, freeRole.RoleNumber);
+                var result = await HCIService.AddBeltpackAsync(request);
+
+                if (result != null && result.IsSuccess)
+                {
+                    knownSerials.Add(serial);
+                    freeRole.AllocationStatus = RoleAllocationStatus.AllocatedFixed;
+                    acceptedCount++;
+                    AddLogEntry($"Beltpack {serial:D6} added successfully on role {freeRole.RoleNumber}", LogLevel.Success);
+                }
+                else
+                {
+                    var reason = result?.ResultDescription ?? "No response";
+                    AddLogEntry($"Failed to add beltpack {serial:D6}: {reason}", LogLevel.Error);
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+            finally
+            {
+                lock (pendingSerials)
+                {
+                    pendingSerials.Remove(serial);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLogEntry($"Error auto-adding beltpack: {ex.Message}", LogLevel.Error);
+        }
     }
 
     public class TrackedBeltpack

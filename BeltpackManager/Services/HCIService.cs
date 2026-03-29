@@ -3,6 +3,7 @@ using HCILibrary.HCIRequests;
 using HCILibrary.HCIResponses;
 using HCILibrary.Models;
 using HCILibrary.Enums;
+using System.Diagnostics;
 
 namespace BeltpackManager.Services;
 
@@ -240,6 +241,7 @@ public class HCIService : IAsyncDisposable
 
     private void OnMessageReceived(object? sender, HCIReply reply)
     {
+        Debug.WriteLine($"[HCIService] OnMessageReceived: MessageID=0x{(int)reply.MessageID:X4} ({reply.MessageID}), HasBeltpackStatus={reply.BeltpackStatus != null}, HasEvent={reply.Event != null}, Flags E={reply.Flags.E} M={reply.Flags.M}");
         MessageReceived?.Invoke(this, reply);
     }
 
@@ -726,6 +728,101 @@ public class HCIService : IAsyncDisposable
 
             var result = await tcs.Task;
             Console.WriteLine($"[HCIService] UpdateRoleStateAsync returning: {(result == null ? "null" : $"Success={result.Success}")}");
+            return result;
+        }
+        finally
+        {
+            _connection.MessageReceived -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Requests current beltpack status from the matrix.
+    /// Sends RequestPanelStatus (0x0005) which triggers ReplyBeltpackStatus (0x004C) responses
+    /// containing the online/offline state of all beltpacks.
+    /// </summary>
+    /// <returns>The aggregated beltpack status reply, or null if the request failed.</returns>
+    public async Task<ReplyBeltpackStatus?> GetBeltpackStatusAsync()
+    {
+        if (_connection == null || !_connection.IsConnected)
+        {
+            Console.WriteLine("[HCIService] Not connected");
+            return null;
+        }
+
+        // Wait for connection to be ready
+        if (_connectionReadyTcs != null)
+        {
+            await _connectionReadyTcs.Task;
+        }
+
+        var request = new RequestPanelStatusRequest();
+        Console.WriteLine($"[HCIService] Sending RequestPanelStatus (Message ID 0x0005) to get beltpack status");
+
+        // Create a TaskCompletionSource to wait for the complete reply
+        var tcs = new TaskCompletionSource<ReplyBeltpackStatus?>();
+
+        // Accumulate beltpack status entries from all message fragments
+        var allEntries = new List<BeltpackStatusEntry>();
+        int fragmentCount = 0;
+
+        EventHandler<HCIReply>? handler = null;
+        handler = (sender, reply) =>
+        {
+            if (reply.MessageID == HCIMessageID.ReplyBeltpackStatus && reply.BeltpackStatus != null)
+            {
+                fragmentCount++;
+                Console.WriteLine($"[HCIService] Got ReplyBeltpackStatus fragment #{fragmentCount}! Entries={reply.BeltpackStatus.Entries.Count}, M flag={reply.Flags.M}");
+
+                allEntries.AddRange(reply.BeltpackStatus.Entries);
+
+                // Check if more fragments are expected (M flag = More data)
+                if (!reply.Flags.M)
+                {
+                    Console.WriteLine($"[HCIService] Last beltpack status fragment (M=false). Total entries={allEntries.Count} from {fragmentCount} fragments");
+
+                    var aggregatedResult = new ReplyBeltpackStatus
+                    {
+                        Schema = reply.BeltpackStatus.Schema,
+                        Entries = allEntries
+                    };
+
+                    _connection!.MessageReceived -= handler;
+                    tcs.TrySetResult(aggregatedResult);
+                }
+            }
+        };
+
+        _connection.MessageReceived += handler;
+
+        try
+        {
+            // Send the request
+            _connection.RequestQueue?.Enqueue(request);
+            Console.WriteLine($"[HCIService] Request enqueued");
+
+            // Wait for response with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            cts.Token.Register(() =>
+            {
+                Console.WriteLine($"[HCIService] Timeout waiting for ReplyBeltpackStatus. Got {fragmentCount} fragments with {allEntries.Count} entries");
+
+                if (allEntries.Count > 0)
+                {
+                    var partialResult = new ReplyBeltpackStatus
+                    {
+                        Entries = allEntries
+                    };
+                    tcs.TrySetResult(partialResult);
+                }
+                else
+                {
+                    tcs.TrySetResult(null);
+                }
+            });
+
+            var result = await tcs.Task;
+            Console.WriteLine($"[HCIService] GetBeltpackStatusAsync returning: {(result == null ? "null" : $"Entries={result.Entries.Count}")}");
             return result;
         }
         finally

@@ -140,8 +140,8 @@ public class ReplyRoleStateSet
             return reply;
         }
 
-        // Role: 2 bytes (big-endian)
-        reply.Role = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+        // Role: 2 bytes (big-endian) - frame is 0-indexed, convert to 1-indexed
+        reply.Role = (ushort)(((payload[offset] << 8) | payload[offset + 1]) + 1);
         offset += 2;
 
         // Current in use status: 1 byte

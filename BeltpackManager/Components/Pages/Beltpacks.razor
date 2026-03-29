@@ -97,17 +97,19 @@
         <MudGrid>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="newBeltpack.SerialNumber" 
+                              @bind-Value:after="OnSerialNumberChanged"
                               Label="Serial Number" 
                               Variant="Variant.Outlined" 
                               Margin="Margin.Dense"
-                              HelperText="Decimal format (e.g., 069968)" />
+                              HelperText="Decimal format (e.g., 018940)" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="newBeltpack.Pmid" 
+                <MudTextField Value="@derivedPmid" 
                               Label="PMID" 
                               Variant="Variant.Outlined" 
                               Margin="Margin.Dense"
-                              HelperText="Decimal format or use same as Serial" />
+                              ReadOnly="true"
+                              HelperText="Auto-derived from Serial Number" />
             </MudItem>
             <MudItem xs="12">
                 <MudTextField @bind-Value="newBeltpack.Name" 
@@ -137,10 +139,11 @@
                                Label="Role" 
                                Variant="Variant.Outlined" 
                                Margin="Margin.Dense"
-                               HelperText="Select a role (601-799)">
-                        @for (int i = 601; i <= 799; i++)
+                               HelperText="Select an available role">
+                        @foreach (var role in availableRoles)
                         {
-                            <MudSelectItem Value="@i">@i</MudSelectItem>
+                            var roleNum = (int)role.RoleNumber;
+                            <MudSelectItem Value="@roleNum">@role.RoleNumber - @role.AllocationStatus</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -180,6 +183,8 @@
     private bool firstRender = true;
     private bool showAddDialog = false;
     private NewBeltpackModel newBeltpack = new();
+    private string derivedPmid = string.Empty;
+    private List<RoleStateEntry> availableRoles = new();
 
     protected override void OnInitialized()
     {
@@ -285,6 +290,21 @@
             var hciInfo = await HCIService.GetHciAddedBeltpacksAsync();
             Console.WriteLine($"[Beltpacks] Received HCI-added response with {hciInfo?.Beltpacks.Count ?? 0} beltpacks");
 
+            await Task.Delay(500);
+
+            // Request beltpack status to get all PMIDs (ReplyBeltpackInformation may be
+            // truncated by the matrix at ~74 entries when there are more beltpacks)
+            Console.WriteLine("[Beltpacks] Requesting beltpack status for complete PMID list...");
+            var beltpackStatus = await HCIService.GetBeltpackStatusAsync();
+            Console.WriteLine($"[Beltpacks] Received beltpack status with {beltpackStatus?.Entries.Count ?? 0} entries");
+
+            await Task.Delay(500);
+
+            // Request available roles
+            Console.WriteLine("[Beltpacks] Requesting available roles...");
+            var roleStateReply = await HCIService.GetRolesAsync();
+            Console.WriteLine($"[Beltpacks] Received {roleStateReply?.Roles.Count ?? 0} roles");
+
             await InvokeAsync(() =>
             {
                 // Process Map/OTA beltpacks
@@ -301,22 +321,73 @@
                         .ToList();
                 }
 
-                // Process HCI-added beltpacks
+                // Process HCI-added beltpacks from ReplyBeltpackInformation
+                var hciBeltpacksByPmid = new Dictionary<uint, Beltpack>();
                 if (hciInfo != null && hciInfo.Beltpacks.Count > 0)
                 {
-                    hciBeltpacks = hciInfo.Beltpacks
-                        .Select(entry => new Beltpack
+                    foreach (var entry in hciInfo.Beltpacks)
+                    {
+                        var bp = new Beltpack
                         {
                             SerialNumber = entry.SerialNumber.ToString("D6"),
                             Pmid = entry.Pmid.ToString("X8"),
                             PmidRaw = entry.Pmid,
                             DefaultRole = entry.DefaultRoleOneIndexed,
                             Mode = entry.Mode.ToString()
-                        })
-                        .ToList();
+                        };
+                        hciBeltpacksByPmid[entry.Pmid] = bp;
+                    }
                 }
 
-                debugMessage = $"Loaded {mapOtaBeltpacks.Count} Map/OTA beltpack(s) and {hciBeltpacks.Count} HCI-added beltpack(s)";
+                // Supplement with beltpack status entries for any PMIDs not covered
+                // by ReplyBeltpackInformation (which may be truncated at ~74 entries)
+                if (beltpackStatus != null)
+                {
+                    // Collect Map/OTA PMIDs so we don't add those as HCI entries
+                    var mapOtaPmids = new HashSet<uint>();
+                    if (mapOtaInfo != null)
+                    {
+                        foreach (var entry in mapOtaInfo.Beltpacks)
+                        {
+                            mapOtaPmids.Add(entry.Pmid);
+                        }
+                    }
+
+                    int supplemented = 0;
+                    foreach (var statusEntry in beltpackStatus.Entries)
+                    {
+                        if (!hciBeltpacksByPmid.ContainsKey(statusEntry.Pmid) && !mapOtaPmids.Contains(statusEntry.Pmid))
+                        {
+                            // This PMID was in beltpack status but not in beltpack information —
+                            // it was truncated. Create an entry from the status data.
+                            var bp = new Beltpack
+                            {
+                                SerialNumber = statusEntry.Pmid.ToString("D6"),
+                                Pmid = statusEntry.Pmid.ToString("X8"),
+                                PmidRaw = statusEntry.Pmid,
+                                DefaultRole = statusEntry.RoleNumber,
+                                Mode = "Pool"
+                            };
+                            hciBeltpacksByPmid[statusEntry.Pmid] = bp;
+                            supplemented++;
+                        }
+                    }
+
+                    if (supplemented > 0)
+                    {
+                        Console.WriteLine($"[Beltpacks] Supplemented {supplemented} beltpacks from status data (ReplyBeltpackInformation was truncated)");
+                    }
+                }
+
+                hciBeltpacks = hciBeltpacksByPmid.Values.ToList();
+
+                // Store available roles
+                if (roleStateReply != null && roleStateReply.Roles.Count > 0)
+                {
+                    availableRoles = roleStateReply.Roles.OrderBy(r => r.RoleNumber).ToList();
+                }
+
+                debugMessage = $"Loaded {mapOtaBeltpacks.Count} Map/OTA beltpack(s), {hciBeltpacks.Count} HCI-added beltpack(s), and {availableRoles.Count} role(s)";
                 loading = false;
                 StateHasChanged();
             });
@@ -347,7 +418,24 @@
     private void OpenAddDialog()
     {
         newBeltpack = new NewBeltpackModel();
+        if (availableRoles.Count > 0)
+        {
+            newBeltpack.Role = availableRoles[0].RoleNumber;
+        }
+        derivedPmid = string.Empty;
         showAddDialog = true;
+    }
+
+    private void OnSerialNumberChanged()
+    {
+        if (uint.TryParse(newBeltpack.SerialNumber, out uint serial))
+        {
+            derivedPmid = serial.ToString("X8");
+        }
+        else
+        {
+            derivedPmid = string.Empty;
+        }
     }
 
     private void CloseAddDialog()
@@ -362,18 +450,14 @@
             errorMessage = null;
             debugMessage = $"Adding beltpack {newBeltpack.SerialNumber}...";
 
-            // Parse serial number and PMID
+            // Parse serial number (PMID is derived from serial)
             if (!uint.TryParse(newBeltpack.SerialNumber, out uint serialNumber))
             {
                 errorMessage = "Invalid serial number format";
                 return;
             }
 
-            if (!uint.TryParse(newBeltpack.Pmid, out uint pmid))
-            {
-                errorMessage = "Invalid PMID format";
-                return;
-            }
+            uint pmid = serialNumber;
 
             // Create the request based on mode
             HCILibrary.HCIRequests.RequestBeltpackAddRequest request = newBeltpack.Mode switch
@@ -399,7 +483,7 @@
             else
             {
                 errorMessage = result != null 
-                    ? $"Failed to add beltpack: {result.Result}" 
+                    ? $"Failed to add beltpack: {result.ResultDescription}" 
                     : "Failed to add beltpack: No response from matrix";
             }
 
@@ -416,19 +500,15 @@
     {
         // Check if required fields are filled
         if (string.IsNullOrWhiteSpace(newBeltpack.SerialNumber)) return false;
-        if (string.IsNullOrWhiteSpace(newBeltpack.Pmid)) return false;
         if (string.IsNullOrWhiteSpace(newBeltpack.Name)) return false;
 
-        // Validate serial number format
+        // Validate serial number format (PMID is derived from serial)
         if (!uint.TryParse(newBeltpack.SerialNumber, out _)) return false;
-
-        // Validate PMID format
-        if (!uint.TryParse(newBeltpack.Pmid, out _)) return false;
 
         // Mode-specific validations
         if (newBeltpack.Mode == "FixedRole" || newBeltpack.Mode == "PreferredRole" || newBeltpack.Mode == "PreferredRoleAndTeam")
         {
-            if (newBeltpack.Role < 601 || newBeltpack.Role > 799) return false;
+            if (!availableRoles.Any(r => r.RoleNumber == newBeltpack.Role)) return false;
         }
 
         if (newBeltpack.Mode == "PreferredTeam" || newBeltpack.Mode == "PreferredRoleAndTeam")
@@ -462,32 +542,11 @@
             {
                 debugMessage = $"Beltpack {beltpack.SerialNumber} deleted successfully!";
 
-                // Reload only HCI-added beltpacks (more efficient than reloading both tables)
+                // Reload all beltpack data (uses status supplement to handle truncation)
                 loading = true;
                 StateHasChanged();
 
-                var hciInfo = await HCIService.GetHciAddedBeltpacksAsync();
-
-                if (hciInfo != null && hciInfo.Beltpacks.Count > 0)
-                {
-                    hciBeltpacks = hciInfo.Beltpacks
-                        .Select(entry => new Beltpack
-                        {
-                            SerialNumber = entry.SerialNumber.ToString("D6"),
-                            Pmid = entry.Pmid.ToString("X8"),
-                            PmidRaw = entry.Pmid,
-                            DefaultRole = entry.DefaultRoleOneIndexed,
-                            Mode = entry.Mode.ToString()
-                        })
-                        .ToList();
-                }
-                else
-                {
-                    hciBeltpacks = new();
-                }
-
-                debugMessage = $"Beltpack deleted. {hciBeltpacks.Count} HCI-added beltpack(s) remaining.";
-                loading = false;
+                await LoadBeltpacksAsync();
             }
             else
             {
@@ -517,7 +576,6 @@
     public class NewBeltpackModel
     {
         public string SerialNumber { get; set; } = string.Empty;
-        public string Pmid { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Mode { get; set; } = "Pool";
         public int Role { get; set; } = 601;

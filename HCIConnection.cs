@@ -1,6 +1,7 @@
 using HCILibrary.Enums;
 using HCILibrary.Helpers;
 using HCILibrary.Models;
+using System.Diagnostics;
 using System.Net.Sockets;
 
 namespace HCILibrary;
@@ -287,6 +288,8 @@ public class HCIConnection : IDisposable
 
     /// <summary>
     /// Processes the buffer to extract complete messages.
+    /// Uses the length field to determine message boundaries rather than scanning
+    /// for end markers, since end marker bytes (0x2E 0x8D) can appear in payload data.
     /// </summary>
     private void ProcessBuffer()
     {
@@ -313,34 +316,59 @@ public class HCIConnection : IDisposable
                     _buffer.RemoveRange(0, startIndex);
                 }
 
-                // Find end marker
-                int endIndex = FindSequence(_buffer, EndMarker, StartMarker.Length);
-                if (endIndex == -1)
+                // Need at least 4 bytes to read start marker + length field
+                if (_buffer.Count < 4)
                 {
-                    // No complete message yet
                     break;
                 }
 
-                // Extract complete message
-                int messageLength = endIndex + EndMarker.Length;
-                var message = _buffer.Take(messageLength).ToArray();
-                _buffer.RemoveRange(0, messageLength);
+                // Read length field (2 bytes big-endian, after start marker)
+                // Total message length = start(2) + length field value
+                ushort expectedLength = (ushort)((_buffer[2] << 8) | _buffer[3]);
 
-                // Validate length field before decoding
-                if (message.Length >= 4)
+                // Sanity check: length must be at least enough for header + end marker
+                if (expectedLength < 9) // start(2) + length(2) + msgId(2) + flags(1) + end(2)
                 {
-                    ushort expectedLength = (ushort)((message[2] << 8) | message[3]);
-                    
-                    // Total message should be: start(2) + length field value
-                    if (message.Length == expectedLength)
+                    // Invalid length — skip this start marker and look for the next one
+                    _buffer.RemoveRange(0, StartMarker.Length);
+                    continue;
+                }
+
+                // Wait until we have the complete message in the buffer
+                if (_buffer.Count < expectedLength)
+                {
+                    break;
+                }
+
+                // Extract the complete message using the length field
+                var message = _buffer.Take(expectedLength).ToArray();
+                _buffer.RemoveRange(0, expectedLength);
+
+                // Validate end marker is at the expected position
+                int endMarkerPos = expectedLength - EndMarker.Length;
+                if (message[endMarkerPos] == EndMarker[0] && message[endMarkerPos + 1] == EndMarker[1])
+                {
+                    // Log RX message summary
+                    ushort msgId = (ushort)((message[4] << 8) | message[5]);
+                    byte flags = message[6];
+                    var rxLog = $"RX [0x{msgId:X4}] ({expectedLength} bytes) Flags: E={((flags & 0x01) != 0)}, M={((flags & 0x02) != 0)}, U={((flags & 0x04) != 0)}, G={((flags & 0x08) != 0)}, S={((flags & 0x10) != 0)}, N={((flags & 0x20) != 0)}";
+                    Console.WriteLine(rxLog);
+                    Debug.WriteLine(rxLog);
+
+                    // Hand off to HCIResponse for decoding
+                    var reply = HCIResponse.Decode(message);
+                    if (reply != null)
                     {
-                        // Hand off to HCIResponse for decoding
-                        var reply = HCIResponse.Decode(message);
-                        if (reply != null)
-                        {
-                            HandleReply(reply);
-                        }
+                        HandleReply(reply);
                     }
+                }
+                else
+                {
+                    ushort msgId = (ushort)((message[4] << 8) | message[5]);
+                    var dropLog = $"RX [0x{msgId:X4}] ({expectedLength} bytes) DROPPED — end marker mismatch at offset {endMarkerPos}: got 0x{message[endMarkerPos]:X2} 0x{message[endMarkerPos + 1]:X2}, expected 0x{EndMarker[0]:X2} 0x{EndMarker[1]:X2}";
+                    Console.WriteLine(dropLog);
+                    Debug.WriteLine(dropLog);
+                    Debug.WriteLine($"  Full message: {BitConverter.ToString(message)}");
                 }
             }
         }

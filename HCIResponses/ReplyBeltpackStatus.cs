@@ -122,61 +122,117 @@ public class ReplyBeltpackStatus
         offset += 2;
 
         // Parse each entry
-        // Entry structure (8 bytes total):
-        // Bytes 0-3: PMID (20 bits) | Status (1 bit) | FrequencyType (2 bits) | WirelessMode (1 bit) | Unused (8 bits)
-        //   Bits 31-12: PMID (20 bits)
-        //   Bit 11: Status (1 bit)
-        //   Bits 10-9: Frequency Type (2 bits)
-        //   Bit 8: Wireless Mode (1 bit)
-        //   Bits 7-0: Unused (8 bits)
-        // Bytes 4-5: Role Number (2 bytes, big-endian)
-        // Bytes 6-7: Antenna Port (2 bytes, big-endian)
-        const int entrySize = 8;
+        // Schema 1 entry structure (8 bytes total):
+        //   Bytes 0-3: PMID (20 bits) | Status (1 bit) | FrequencyType (2 bits) | WirelessMode (1 bit) | Unused (8 bits)
+        //     Bits 31-12: PMID (20 bits)
+        //     Bit 11: Status (1 bit)
+        //     Bits 10-9: Frequency Type (2 bits)
+        //     Bit 8: Wireless Mode (1 bit)
+        //     Bits 7-0: Unused (8 bits)
+        //   Bytes 4-5: Role Number (2 bytes, big-endian)
+        //   Bytes 6-7: Antenna Port (2 bytes, big-endian)
+        //
+        // Schema 2 entry structure (10+ bytes):
+        //   Bytes 0-3: PMID (full 32-bit, big-endian)
+        //   Byte 4: Status packed byte (bit 7: online, bits 6-5: freq type, bit 4: wireless mode)
+        //   Byte 5: Reserved
+        //   Bytes 6-7: Role Number (2 bytes, big-endian, 0-indexed)
+        //   Bytes 8-9: Antenna Port (2 bytes, big-endian)
+        //   Remaining bytes: additional schema 2 data (skipped)
 
-        for (int i = 0; i < entryCount && offset + entrySize <= payload.Length; i++)
+        // Determine entry size based on remaining payload
+        int remainingBytes = payload.Length - offset;
+        int entrySize = entryCount > 0 ? remainingBytes / entryCount : 0;
+
+        for (int i = 0; i < entryCount; i++)
         {
-            // Read the 4-byte packed field
-            uint packedField = (uint)((payload[offset] << 24) | 
-                                      (payload[offset + 1] << 16) | 
-                                      (payload[offset + 2] << 8) | 
-                                      payload[offset + 3]);
-
-            // Extract fields from packed data
-            // PMID: bits 31-12 (20 bits)
-            uint pmid = (packedField >> 12) & 0xFFFFF;
-
-            // Status: bit 11 (1 bit)
-            byte status = (byte)((packedField >> 11) & 0x01);
-
-            // Frequency Type: bits 10-9 (2 bits)
-            byte frequencyType = (byte)((packedField >> 9) & 0x03);
-
-            // Wireless Mode: bit 8 (1 bit)
-            byte wirelessMode = (byte)((packedField >> 8) & 0x01);
-
-            // Unused: bits 7-0 (8 bits) - skip
-
-            offset += 4;
-
-            // Role Number (2 bytes, big-endian)
-            ushort roleNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
-            offset += 2;
-
-            // Antenna Port (2 bytes, big-endian)
-            ushort antennaPort = (ushort)((payload[offset] << 8) | payload[offset + 1]);
-            offset += 2;
-
-            var entry = new BeltpackStatusEntry
+            if (result.Schema >= 2)
             {
-                Pmid = pmid,
-                Status = (BeltpackStatus)status,
-                FrequencyType = (BeltpackFrequencyType)frequencyType,
-                WirelessMode = (BeltpackWirelessMode)wirelessMode,
-                RoleNumber = roleNumber,
-                AntennaPort = antennaPort
-            };
+                // Schema 2: unpacked PMID, separate status byte
+                if (offset + 10 > payload.Length)
+                    break;
 
-            result.Entries.Add(entry);
+                // PMID: 4 bytes (big-endian, full 32-bit)
+                uint pmid = (uint)((payload[offset] << 24) | 
+                                   (payload[offset + 1] << 16) | 
+                                   (payload[offset + 2] << 8) | 
+                                   payload[offset + 3]);
+                offset += 4;
+
+                // Status packed byte
+                byte statusByte = payload[offset++];
+                byte status = (byte)((statusByte >> 7) & 0x01);
+                byte frequencyType = (byte)((statusByte >> 5) & 0x03);
+                byte wirelessMode = (byte)((statusByte >> 4) & 0x01);
+
+                // Reserved byte
+                offset++;
+
+                // Role Number (2 bytes, big-endian, 0-indexed)
+                ushort roleNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+                offset += 2;
+
+                // Antenna Port (2 bytes, big-endian)
+                ushort antennaPort = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+                offset += 2;
+
+                // Skip any additional schema 2 data for this entry
+                int schema2ExtraBytes = entrySize - 10;
+                if (schema2ExtraBytes > 0)
+                    offset += schema2ExtraBytes;
+
+                var entry = new BeltpackStatusEntry
+                {
+                    Pmid = pmid,
+                    Status = (BeltpackStatus)status,
+                    FrequencyType = (BeltpackFrequencyType)frequencyType,
+                    WirelessMode = (BeltpackWirelessMode)wirelessMode,
+                    RoleNumber = roleNumber,
+                    AntennaPort = antennaPort
+                };
+
+                result.Entries.Add(entry);
+            }
+            else
+            {
+                // Schema 1: 20-bit packed PMID
+                if (offset + 8 > payload.Length)
+                    break;
+
+                // Read the 4-byte packed field
+                uint packedField = (uint)((payload[offset] << 24) | 
+                                          (payload[offset + 1] << 16) | 
+                                          (payload[offset + 2] << 8) | 
+                                          payload[offset + 3]);
+
+                // Extract fields from packed data
+                uint pmid = (packedField >> 12) & 0xFFFFF;
+                byte status = (byte)((packedField >> 11) & 0x01);
+                byte frequencyType = (byte)((packedField >> 9) & 0x03);
+                byte wirelessMode = (byte)((packedField >> 8) & 0x01);
+
+                offset += 4;
+
+                // Role Number (2 bytes, big-endian)
+                ushort roleNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+                offset += 2;
+
+                // Antenna Port (2 bytes, big-endian)
+                ushort antennaPort = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+                offset += 2;
+
+                var entry = new BeltpackStatusEntry
+                {
+                    Pmid = pmid,
+                    Status = (BeltpackStatus)status,
+                    FrequencyType = (BeltpackFrequencyType)frequencyType,
+                    WirelessMode = (BeltpackWirelessMode)wirelessMode,
+                    RoleNumber = roleNumber,
+                    AntennaPort = antennaPort
+                };
+
+                result.Entries.Add(entry);
+            }
         }
 
         return result;

@@ -76,8 +76,8 @@ public class ReplyRoleState
         // Parse role entries (9 bytes each)
         for (int i = 0; i < count && offset + 9 <= payload.Length; i++)
         {
-            // Role Number: 2 bytes (big-endian)
-            ushort roleNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+            // Role Number: 2 bytes (big-endian) - frame is 0-indexed, convert to 1-indexed
+            ushort roleNumber = (ushort)(((payload[offset] << 8) | payload[offset + 1]) + 1);
             offset += 2;
 
             // Current in use status: 1 byte
