@@ -161,6 +161,7 @@
     </MudButton>
     <MudTable Items="@cards" Hover="true" Striped="true" Dense="true">
         <HeaderContent>
+            <MudTh></MudTh>
             <MudTh>Rack</MudTh>
             <MudTh>Slot</MudTh>
             <MudTh>Current Type</MudTh>
@@ -172,18 +173,61 @@
             <MudTh>Boot Version</MudTh>
             <MudTh>FPGA Version</MudTh>
         </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Rack">@context.RackNumber</MudTd>
-            <MudTd DataLabel="Slot">@context.SlotNumber</MudTd>
-            <MudTd DataLabel="Current Type">@context.CurrentCardType</MudTd>
-            <MudTd DataLabel="Expected Type">@context.ExpectedCardType</MudTd>
-            <MudTd DataLabel="Health">@context.Health</MudTd>
-            <MudTd DataLabel="Ports">@context.FirstPort - @context.LastPort</MudTd>
-            <MudTd DataLabel="Channels">@context.Channels</MudTd>
-            <MudTd DataLabel="App Version">@context.AppVersionStr</MudTd>
-            <MudTd DataLabel="Boot Version">@context.BootVersionStr</MudTd>
-            <MudTd DataLabel="FPGA Version">@context.FpgaVersionStr</MudTd>
+        <RowTemplate Context="card">
+            <MudTd DataLabel="">
+                <MudIconButton Icon="@(expandedSlots.Contains(card.SlotNumber) ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)"
+                               Size="Size.Small"
+                               OnClick="@(() => ToggleCardPorts(card))" />
+            </MudTd>
+            <MudTd DataLabel="Rack">@card.RackNumber</MudTd>
+            <MudTd DataLabel="Slot">@card.SlotNumber</MudTd>
+            <MudTd DataLabel="Current Type">@card.CurrentCardType</MudTd>
+            <MudTd DataLabel="Expected Type">@card.ExpectedCardType</MudTd>
+            <MudTd DataLabel="Health">@card.Health</MudTd>
+            <MudTd DataLabel="Ports">@card.FirstPort - @card.LastPort</MudTd>
+            <MudTd DataLabel="Channels">@card.Channels</MudTd>
+            <MudTd DataLabel="App Version">@card.AppVersionStr</MudTd>
+            <MudTd DataLabel="Boot Version">@card.BootVersionStr</MudTd>
+            <MudTd DataLabel="FPGA Version">@card.FpgaVersionStr</MudTd>
         </RowTemplate>
+        <ChildRowContent Context="cardChild">
+            @if (expandedSlots.Contains(cardChild.SlotNumber))
+            {
+                var ports = GetPortsForCard(cardChild);
+                <MudTr>
+                    <td colspan="11" class="pa-2">
+                        <MudText Typo="Typo.subtitle2" GutterBottom="true">
+                            Port Info - Rack @cardChild.RackNumber, Slot @cardChild.SlotNumber
+                        </MudText>
+                        <MudTable Items="@ports" Hover="true" Dense="true" Bordered="true" Class="ml-4">
+                            <HeaderContent>
+                                <MudTh>Port</MudTh>
+                                <MudTh>Panel Type</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Label</MudTh>
+                                <MudTh>Firmware</MudTh>
+                                <MudTh>Keys</MudTh>
+                                <MudTh>Exp. Panels</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Port">@context.PortNumber</MudTd>
+                                <MudTd DataLabel="Panel Type">@context.PanelType</MudTd>
+                                <MudTd DataLabel="Status">@context.OperationalStatus</MudTd>
+                                <MudTd DataLabel="Label">@context.TalkListenLabel</MudTd>
+                                <MudTd DataLabel="Firmware">@context.PanelFirmware</MudTd>
+                                <MudTd DataLabel="Keys">@context.NumberOfKeys</MudTd>
+                                <MudTd DataLabel="Exp. Panels">@context.NumberOfExpansionPanels</MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    No port info received yet for this slot.
+                                </MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
         <NoRecordsContent>
             <MudText>No card info received yet.</MudText>
         </NoRecordsContent>
@@ -216,6 +260,8 @@
     private List<EntityInfoEntry> ifbEntities = new();
     private bool awaitingEntityFragments;
     private List<CardInfo> cards = new();
+    private readonly Dictionary<ushort, List<PortInfo>> portsBySlot = new();
+    private readonly HashSet<ushort> expandedSlots = new();
     private readonly List<string> callbackLog = new();
     private const int MaxLogEntries = 100;
 
@@ -236,7 +282,29 @@
     private void RequestCardInfo()
     {
         cards.Clear();
+        portsBySlot.Clear();
+        expandedSlots.Clear();
         HCIService.RequestCardInfo();
+    }
+
+    private void RequestPortInfo(CardInfo card)
+    {
+        HCIService.RequestPortInfo((ushort)(card.SlotNumber - 1));
+    }
+
+    private void ToggleCardPorts(CardInfo card)
+    {
+        if (!expandedSlots.Add(card.SlotNumber))
+        {
+            expandedSlots.Remove(card.SlotNumber);
+            return;
+        }
+
+        // Expanding: fetch port info for this slot if we don't already have it.
+        if (!portsBySlot.ContainsKey(card.SlotNumber))
+        {
+            RequestPortInfo(card);
+        }
     }
 
     protected override void OnInitialized()
@@ -364,6 +432,12 @@
                 HandleCardInfo(reply.CardInfo);
             }
 
+            if (reply.PortInfo != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] OnMessageReceived: PortInfo present for slot {reply.PortInfo.SlotNumber}, {reply.PortInfo.Ports.Count} port(s)");
+                HandlePortInfo(reply.PortInfo);
+            }
+
             StateHasChanged();
         });
     }
@@ -413,9 +487,28 @@
         // The matrix answers a "get all" request with several replies: one large reply
         // plus multiple per-slot replies. Merge by Rack/Slot instead of replacing so the
         // table accumulates the full set rather than flickering to the last reply.
+        // NOTE: the firmware emits TWO entries per physical slot - a front card and its
+        // rear connector unit (RCU) - sharing the same rack/slot. We do not display rear
+        // connector units, so skip them; this also prevents front/rear key collisions.
         foreach (var card in cardInfo.Cards)
         {
-            var existing = cards.FirstOrDefault(c => c.RackNumber == card.RackNumber && c.SlotNumber == card.SlotNumber);
+            if (card.RearConnectorUnit)
+            {
+                continue;
+            }
+
+            // Skip empty/unfitted slots. The firmware reports absent slots with
+            // Health = Absent and an Unknown card type; we only want real cards.
+            if (card.Health == HCILibrary.Enums.CardHealth.Absent ||
+                (card.CurrentCardType == HCILibrary.Enums.CardInfoType.Unknown &&
+                 card.ExpectedCardType == HCILibrary.Enums.CardInfoType.Unknown))
+            {
+                continue;
+            }
+
+            var existing = cards.FirstOrDefault(c =>
+                c.RackNumber == card.RackNumber &&
+                c.SlotNumber == card.SlotNumber);
             if (existing != null)
             {
                 cards.Remove(existing);
@@ -429,6 +522,39 @@
             .ToList();
 
         AddLogEntry($"Card Info: {cardInfo.Count} card(s) received");
+    }
+
+    private void HandlePortInfo(ReplyPortInfo portInfo)
+    {
+        // The matrix may answer a single Request Port Info with multiple replies,
+        // one per burst of ports on the slot. Merge by port number so the child
+        // table accumulates rather than flickering to the last reply.
+        if (!portsBySlot.TryGetValue(portInfo.SlotNumber, out var ports))
+        {
+            ports = new List<PortInfo>();
+            portsBySlot[portInfo.SlotNumber] = ports;
+        }
+
+        foreach (var port in portInfo.Ports)
+        {
+            var existing = ports.FirstOrDefault(p => p.PortNumber == port.PortNumber);
+            if (existing != null)
+            {
+                ports.Remove(existing);
+            }
+            ports.Add(port);
+        }
+
+        ports.Sort((a, b) => a.PortNumber.CompareTo(b.PortNumber));
+
+        AddLogEntry($"Port Info: slot {portInfo.SlotNumber}, {portInfo.Ports.Count} port(s) received");
+    }
+
+    private IReadOnlyList<PortInfo> GetPortsForCard(CardInfo card)
+    {
+        return portsBySlot.TryGetValue(card.SlotNumber, out var ports)
+            ? ports
+            : System.Array.Empty<PortInfo>();
     }
 
     private void HandleEntityInfo(ReplyEntityInfo entityInfo, bool hasMoreFragments)

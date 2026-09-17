@@ -71,6 +71,18 @@ public class HCIService : IAsyncDisposable
     }
 
     /// <summary>
+    /// Requests port information (connected port type, firmware and settings) for
+    /// the ports on the specified card slot.
+    /// </summary>
+    /// <param name="slotNumber">The card slot number to query.</param>
+    /// <param name="portOffset">The port offset within the card (0-based). Use 0 to request all ports on the card.</param>
+    public void RequestPortInfo(ushort slotNumber, byte portOffset = 0)
+    {
+        System.Diagnostics.Debug.WriteLine($"[HCIService.RequestPortInfo] Sending RequestPortInfoRequest for slot {slotNumber}, port offset {portOffset}");
+        SendRequest(new RequestPortInfoRequest((byte)slotNumber, portOffset));
+    }
+
+    /// <summary>
     /// Requests all entity labels (Conferences, Groups and IFBs) from the matrix.
     ///
     /// IMPORTANT: The matrix firmware (EcsHci_RequestEntityInfo) only terminates its

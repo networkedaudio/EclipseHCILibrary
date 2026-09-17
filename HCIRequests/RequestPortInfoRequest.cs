@@ -24,7 +24,13 @@ public class RequestPortInfoRequest : HCIRequest
     /// <summary>
     /// Gets or sets the card slot number.
     /// </summary>
-    public ushort SlotNumber { get; set; }
+    public byte SlotNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the port offset within the card (0-based).
+    /// An offset of 0 requests information for all ports on the card.
+    /// </summary>
+    public byte PortOffset { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestPortInfoRequest"/> class.
@@ -36,18 +42,31 @@ public class RequestPortInfoRequest : HCIRequest
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestPortInfoRequest"/> class
-    /// with specified slot number.
+    /// with specified slot number. The port offset defaults to 0 (all ports on the card).
     /// </summary>
     /// <param name="slotNumber">The card slot number.</param>
     public RequestPortInfoRequest(ushort slotNumber)
         : base(HCIMessageID.RequestPortInfo)
     {
+        SlotNumber = (byte)slotNumber;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestPortInfoRequest"/> class
+    /// with specified slot number and port offset.
+    /// </summary>
+    /// <param name="slotNumber">The card slot number.</param>
+    /// <param name="portOffset">The port offset within the card (0-based). Use 0 for all ports.</param>
+    public RequestPortInfoRequest(byte slotNumber, byte portOffset)
+        : base(HCIMessageID.RequestPortInfo)
+    {
         SlotNumber = slotNumber;
+        PortOffset = portOffset;
     }
 
     /// <summary>
     /// Generates the HCIv2 payload for Request Port Info.
-    /// Payload: Protocol Tag (4 bytes) + Protocol Schema (1 byte) + Slot Number (2 bytes).
+    /// Payload: Protocol Tag (4 bytes) + Protocol Schema (1 byte) + Slot Number (2 bytes, big-endian).
     /// </summary>
     /// <returns>The payload byte array.</returns>
     protected override byte[] GeneratePayload()
@@ -60,7 +79,7 @@ public class RequestPortInfoRequest : HCIRequest
         // Protocol schema
         ms.WriteByte(ProtocolSchema);
 
-        // Slot Number: 16 bit word (big-endian)
+        // Slot Number: 16 bit word (big-endian) - original on-wire format
         ms.WriteByte((byte)(SlotNumber >> 8));
         ms.WriteByte((byte)(SlotNumber & 0xFF));
 

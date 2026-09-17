@@ -72,6 +72,15 @@ public class PanelOperationalStatus
     public PortType PortType { get; set; }
 
     /// <summary>
+    /// Returns a human-readable representation of the operational status.
+    /// </summary>
+    public override string ToString()
+    {
+        string state = IsOnline ? "Online" : "Offline";
+        return $"{state} ({PortType})";
+    }
+
+    /// <summary>
     /// Parses an operational status byte.
     /// </summary>
     /// <param name="status">The raw status byte.</param>

@@ -38,6 +38,12 @@ public class RequestPeripheralInfoRequest : HCIRequest
     public byte SlotId { get; set; }
 
     /// <summary>
+    /// Gets or sets the port offset within the card (0-based). Optional; not all
+    /// peripheral queries use a port offset.
+    /// </summary>
+    public byte Port { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="RequestPeripheralInfoRequest"/> class.
     /// </summary>
     public RequestPeripheralInfoRequest()
@@ -55,6 +61,20 @@ public class RequestPeripheralInfoRequest : HCIRequest
         : base(HCIMessageID.RequestPeripheralInfo)
     {
         SlotId = slotId;
+        ExpectedReplyMessageID = HCIMessageID.ReplyPeripheralInfo;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestPeripheralInfoRequest"/> class
+    /// with the specified slot ID and port offset.
+    /// </summary>
+    /// <param name="slotId">The slot ID of interest. Use 0xFF for wireless devices.</param>
+    /// <param name="port">The port offset within the card (0-based).</param>
+    public RequestPeripheralInfoRequest(byte slotId, byte port)
+        : base(HCIMessageID.RequestPeripheralInfo)
+    {
+        SlotId = slotId;
+        Port = port;
         ExpectedReplyMessageID = HCIMessageID.ReplyPeripheralInfo;
     }
 
