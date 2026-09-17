@@ -108,20 +108,36 @@ public class ReplyCardInfo
             return null;
         }
 
-        var result = new ReplyCardInfo
-        {
-            Count = payload[0]
-        };
+        var result = new ReplyCardInfo();
 
-        // Each card info entry:
-        // SlotType(1) + ExpectedCardType(1) + CurrentCardType(1) + Health(1) + 
+        // Each card info entry (matches firmware ecs_hci_card_info_t, packed):
+        // SlotType(1) + ExpectedCardType(1) + CurrentCardType(1) + Health(1) +
         // RearConnector(1) + RackNumber(1) + SlotNumber(1) + FirstPort(2) + LastPort(2) +
         // Channels(1) + DtmfBoardPresent(2) + AppVersionStr(64) + BootVersionStr(64) + FpgaVersionStr(64)
         // = 206 bytes per entry
         const int cardInfoSize = 206;
-        int offset = 1;
 
-        for (int i = 0; i < result.Count; i++)
+        // The matrix only prefixes the Count byte on the FIRST message of a burst;
+        // continuation messages carry raw entries with no count. Detect which case
+        // this payload is by whether the length leaves a single leading byte.
+        int offset;
+        int entryCount;
+        if (payload.Length % cardInfoSize == 1)
+        {
+            // Leading Count byte present.
+            result.Count = payload[0];
+            entryCount = payload[0];
+            offset = 1;
+        }
+        else
+        {
+            // No count byte: entries start at the beginning of the payload.
+            entryCount = payload.Length / cardInfoSize;
+            result.Count = (byte)entryCount;
+            offset = 0;
+        }
+
+        for (int i = 0; i < entryCount; i++)
         {
             if (payload.Length < offset + cardInfoSize)
             {
