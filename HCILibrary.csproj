@@ -61,7 +61,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="EclipseHXRecorder\**" />
+    <Content Remove="EclipseHXRecorder\**" />
+    <EmbeddedResource Remove="EclipseHXRecorder\**" />
+    <None Remove="EclipseHXRecorder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Tests\EclipseHXRecorder.Tests\" />
   </ItemGroup>
 
 </Project>

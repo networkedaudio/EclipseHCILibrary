@@ -214,6 +214,7 @@ public static class HCIResponse
                 break;
 
             case HCIMessageID.ReplyConferenceStatus:
+                System.Diagnostics.Debug.WriteLine($"[HCIResponse] Processing ReplyConferenceStatus, payload length: {reply.Payload?.Length ?? 0}");
                 DecodeReplyConferenceStatus(reply);
                 break;
 
@@ -1184,7 +1185,16 @@ public static class HCIResponse
     /// <param name="reply">The reply containing the entity info payload.</param>
     private static void DecodeReplyEntityInfo(HCIReply reply)
     {
+        System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyEntityInfo] Parsing payload: {reply.Payload?.Length} bytes");
         reply.EntityInfo = ReplyEntityInfo.Parse(reply.Payload);
+        if (reply.EntityInfo != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyEntityInfo] Parsed successfully: RequestEntityType={reply.EntityInfo.RequestEntityType}, Count={reply.EntityInfo.Count}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[HCIResponse.DecodeReplyEntityInfo] Parse returned null!");
+        }
     }
 
     /// <summary>

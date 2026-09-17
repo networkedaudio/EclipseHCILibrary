@@ -122,8 +122,14 @@ public class ReplyEntityInfo
     /// <returns>The parsed response, or null if parsing fails.</returns>
     public static ReplyEntityInfo? Parse(byte[] payload)
     {
-        // Minimum payload: ProtocolSchema(1) + RequestEntityType(1) + Count(2) = 4 bytes
-        if (payload == null || payload.Length < 4)
+        // The Protocol Tag (0xABBACEDE) and the Protocol Schema byte are stripped from
+        // the message before the payload reaches this method (the HCIv2 handler delivers
+        // the payload after tag + schema, matching the convention used by the other
+        // ReplyXxx decoders). Therefore the payload begins at the Request Entity Type
+        // field, NOT the schema.
+        //
+        // Minimum payload: RequestEntityType(1) + Count(2) = 3 bytes
+        if (payload == null || payload.Length < 3)
         {
             return null;
         }
@@ -131,8 +137,8 @@ public class ReplyEntityInfo
         int offset = 0;
         var result = new ReplyEntityInfo();
 
-        // Protocol Schema (1 byte)
-        result.ProtocolSchema = payload[offset++];
+        // Protocol Schema is not part of this payload (already consumed upstream).
+        result.ProtocolSchema = 0;
 
         // Request Entity Type (1 byte)
         byte entityTypeValue = payload[offset++];
@@ -165,8 +171,8 @@ public class ReplyEntityInfo
 
     private static EntityInfoEntry? ParseEntry(byte[] payload, ref int offset)
     {
-        // Minimum entry size: DialCode(4) + NameLength(2) = 6 bytes
-        const int minEntrySize = 6;
+        // Minimum entry size: DialCode(4) + NameLength(1) = 5 bytes
+        const int minEntrySize = 5;
 
         if (payload.Length < offset + minEntrySize)
         {
@@ -179,9 +185,9 @@ public class ReplyEntityInfo
         entry.DialCode = EntityDialCode.Parse(payload, offset);
         offset += 4;
 
-        // Name Length (2 bytes, big-endian)
-        ushort nameLength = (ushort)((payload[offset] << 8) | payload[offset + 1]);
-        offset += 2;
+        // Name Length (1 byte): number of bytes of the UTF-16BE name that follow.
+        byte nameLength = payload[offset];
+        offset += 1;
 
         // Name (variable length, Unicode/UTF-16BE)
         if (payload.Length < offset + nameLength)

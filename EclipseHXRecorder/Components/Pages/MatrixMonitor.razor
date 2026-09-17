@@ -1,0 +1,474 @@
+@page "/matrix-monitor"
+@using EclipseHXRecorder.Services
+@using HCILibrary.HCIResponses
+@using HCILibrary.Models
+@using HCILibrary.Discovery
+@using HCILibrary.Enums
+@inject HCIService HCIService
+@inject DiscoveryService DiscoveryService
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Matrix Monitor</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Matrix Monitor</MudText>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudText Typo="Typo.h5" GutterBottom="true">Discovered Matrices</MudText>
+<MudText Typo="Typo.body2" Class="mb-2">Matrices detected via EclipseHX multicast/broadcast, or added manually below.</MudText>
+
+<MudTable Items="@discoveredMatrices" Hover="true" Striped="true" Dense="true">
+    <HeaderContent>
+        <MudTh>IP Address</MudTh>
+        <MudTh>Frame Name</MudTh>
+        <MudTh>Identity</MudTh>
+        <MudTh>Type</MudTh>
+        <MudTh>Version</MudTh>
+        <MudTh>Last Seen</MudTh>
+        <MudTh Style="width: 120px;">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="IP Address">@context.IpAddress</MudTd>
+        <MudTd DataLabel="Frame Name">@context.FrameName</MudTd>
+        <MudTd DataLabel="Identity">@context.Identity</MudTd>
+        <MudTd DataLabel="Type">
+            @(context.ManuallyAdded ? "Manual" : context.MatrixType.ToString())
+        </MudTd>
+        <MudTd DataLabel="Version">@context.MapVersion</MudTd>
+        <MudTd DataLabel="Last Seen">@context.LastSeen.ToString("HH:mm:ss")</MudTd>
+        <MudTd DataLabel="Actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       Disabled="@connecting"
+                       OnClick="@(() => ConnectToMatrixAsync(context.IpAddress))">
+                Connect
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No matrices discovered yet. Listening for multicast/broadcast announcements...</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Add Matrix by IP</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="manualIpAddress" Label="IP Address" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="192.168.1.100" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(manualIpAddress) || connecting)"
+                       OnClick="AddAndConnectManualMatrixAsync">
+                Add &amp; Connect
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudDivider Class="my-6" />
+
+<div class="d-flex align-center mb-4" style="gap: 8px;">
+    <MudText Typo="Typo.h5">Connection</MudText>
+    @if (isConnected)
+    {
+        <MudChip T="string" Color="Color.Success" Size="Size.Small">Connected to @connectedIp</MudChip>
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="DisconnectAsync">Disconnect</MudButton>
+    }
+    else
+    {
+        <MudChip T="string" Color="Color.Default" Size="Size.Small">Not connected</MudChip>
+    }
+</div>
+
+@if (isConnected)
+{
+    <MudText Typo="Typo.h5" GutterBottom="true">Crosspoints</MudText>
+    <MudTable Items="@crosspoints" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Monitored Port</MudTh>
+            <MudTh>Connected Ports</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Monitored Port">@context.PortNumber</MudTd>
+            <MudTd DataLabel="Connected Ports">@string.Join(", ", context.ConnectedPorts.Select(p => p.ToString()))</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No crosspoint status received yet.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-4">Entities</MudText>
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RequestAllEntities" Class="mb-2">
+        Refresh
+    </MudButton>
+    @if (awaitingEntityFragments)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="ml-2" />
+        <MudText Typo="Typo.body2" Class="d-inline ml-1">Receiving fragments...</MudText>
+    }
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true" Class="mt-2">Conferences (@conferenceEntities.Count)</MudText>
+    <MudTable Items="@conferenceEntities.OrderBy(c => c.Instance)" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Conference</MudTh>
+            <MudTh>Name</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Conference">@context.Instance</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No conference entities received yet.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true" Class="mt-4">Groups (@groupEntities.Count)</MudText>
+    <MudTable Items="@groupEntities.OrderBy(c => c.Instance)" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Group</MudTh>
+            <MudTh>Name</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Group">@context.Instance</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No group entities received yet.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true" Class="mt-4">IFBs (@ifbEntities.Count)</MudText>
+    <MudTable Items="@ifbEntities.OrderBy(c => c.Instance)" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>IFB</MudTh>
+            <MudTh>Name</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="IFB">@context.Instance</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No IFB entities received yet.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-6">Cards</MudText>
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RequestCardInfo" Class="mb-2">
+        Refresh
+    </MudButton>
+    <MudTable Items="@cards" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Rack</MudTh>
+            <MudTh>Slot</MudTh>
+            <MudTh>Current Type</MudTh>
+            <MudTh>Expected Type</MudTh>
+            <MudTh>Health</MudTh>
+            <MudTh>Ports</MudTh>
+            <MudTh>Channels</MudTh>
+            <MudTh>App Version</MudTh>
+            <MudTh>Boot Version</MudTh>
+            <MudTh>FPGA Version</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Rack">@context.RackNumber</MudTd>
+            <MudTd DataLabel="Slot">@context.SlotNumber</MudTd>
+            <MudTd DataLabel="Current Type">@context.CurrentCardType</MudTd>
+            <MudTd DataLabel="Expected Type">@context.ExpectedCardType</MudTd>
+            <MudTd DataLabel="Health">@context.Health</MudTd>
+            <MudTd DataLabel="Ports">@context.FirstPort - @context.LastPort</MudTd>
+            <MudTd DataLabel="Channels">@context.Channels</MudTd>
+            <MudTd DataLabel="App Version">@context.AppVersionStr</MudTd>
+            <MudTd DataLabel="Boot Version">@context.BootVersionStr</MudTd>
+            <MudTd DataLabel="FPGA Version">@context.FpgaVersionStr</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No card info received yet.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-6">Live Callback Log</MudText>
+    <MudPaper Class="pa-2" Style="max-height: 300px; overflow-y: auto;">
+        @foreach (var entry in callbackLog.AsEnumerable().Reverse())
+        {
+            <MudText Typo="Typo.body2">@entry</MudText>
+        }
+        @if (callbackLog.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Waiting for crosspoint / conference events...</MudText>
+        }
+    </MudPaper>
+}
+
+@code {
+    private List<DiscoveredMatrix> discoveredMatrices = new();
+    private string manualIpAddress = string.Empty;
+    private string? errorMessage;
+    private bool connecting;
+    private bool isConnected;
+    private string? connectedIp;
+
+    private List<MonitoredPortStatus> crosspoints = new();
+    private List<EntityInfoEntry> conferenceEntities = new();
+    private List<EntityInfoEntry> groupEntities = new();
+    private List<EntityInfoEntry> ifbEntities = new();
+    private bool awaitingEntityFragments;
+    private List<CardInfo> cards = new();
+    private readonly List<string> callbackLog = new();
+    private const int MaxLogEntries = 100;
+
+    /// <summary>
+    /// Maximum number of conferences (partylines) supported by an EclipseHX matrix.
+    /// </summary>
+    private const int MaxConferences = 400;
+
+    private void RequestAllEntities()
+    {
+        conferenceEntities.Clear();
+        groupEntities.Clear();
+        ifbEntities.Clear();
+        awaitingEntityFragments = true;
+        HCIService.RequestAllEntities();
+    }
+
+    private void RequestCardInfo()
+    {
+        cards.Clear();
+        HCIService.RequestCardInfo();
+    }
+
+    protected override void OnInitialized()
+    {
+        discoveredMatrices = DiscoveryService.Matrices.ToList();
+        DiscoveryService.MatrixDiscovered += OnMatrixDiscovered;
+
+        isConnected = HCIService.IsConnected;
+        HCIService.ConnectionStateChanged += OnConnectionStateChanged;
+        HCIService.MessageReceived += OnMessageReceived;
+    }
+
+    private void OnMatrixDiscovered(object? sender, DiscoveredMatrix matrix)
+    {
+        InvokeAsync(() =>
+        {
+            var existing = discoveredMatrices.FirstOrDefault(m => m.IpAddress == matrix.IpAddress);
+            if (existing != null)
+            {
+                discoveredMatrices.Remove(existing);
+            }
+            discoveredMatrices.Add(matrix);
+            StateHasChanged();
+        });
+    }
+
+    private async Task AddAndConnectManualMatrixAsync()
+    {
+        var ip = manualIpAddress.Trim();
+        if (string.IsNullOrEmpty(ip))
+        {
+            return;
+        }
+
+        DiscoveryService.AddManualMatrix(ip);
+        await ConnectToMatrixAsync(ip);
+    }
+
+    private async Task ConnectToMatrixAsync(string ipAddress)
+    {
+        connecting = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var connected = await HCIService.ConnectAsync(ipAddress);
+            if (connected)
+            {
+                connectedIp = ipAddress;
+                isConnected = true;
+                crosspoints.Clear();
+                conferenceEntities.Clear();
+                groupEntities.Clear();
+                ifbEntities.Clear();
+                callbackLog.Clear();
+
+                // Request all entities (Conferences, Groups, IFBs) in a single firmware-safe
+                // "All" request. This populates the entity tables via HandleEntityInfo.
+                RequestAllEntities();
+            }
+            else
+            {
+                errorMessage = $"Failed to connect to {ipAddress}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error connecting to {ipAddress}: {ex.Message}";
+        }
+        finally
+        {
+            connecting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        await HCIService.DisconnectAsync();
+        isConnected = false;
+        connectedIp = null;
+        StateHasChanged();
+    }
+
+    private void OnConnectionStateChanged(object? sender, bool connected)
+    {
+        InvokeAsync(() =>
+        {
+            isConnected = connected;
+            if (!connected)
+            {
+                connectedIp = null;
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void OnMessageReceived(object? sender, HCIReply reply)
+    {
+        InvokeAsync(() =>
+        {
+            if (reply.CrosspointStatus != null)
+            {
+                HandleCrosspointStatus(reply.CrosspointStatus);
+            }
+
+            if (reply.ConferenceStatus != null)
+            {
+                // Log Conference Status when received
+                System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] Received Conference Status for conference {reply.ConferenceStatus.ConferenceNumber}: {reply.ConferenceStatus.Ports.Count} ports");
+                HandleConferenceStatus(reply.ConferenceStatus);
+            }
+
+            if (reply.EntityInfo != null)
+            {
+                // E bit (bit 0) = 1 if another packet is expected to follow
+                System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] OnMessageReceived: EntityInfo present, Flags.E={reply.Flags.E}, RequestEntityType={reply.EntityInfo.RequestEntityType}");
+                HandleEntityInfo(reply.EntityInfo, reply.Flags.E);
+            }
+
+            if (reply.CardInfo != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] OnMessageReceived: CardInfo present, {reply.CardInfo.Count} card(s)");
+                HandleCardInfo(reply.CardInfo);
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private void HandleCrosspointStatus(ReplyCrosspointStatus status)
+    {
+        foreach (var monitored in status.MonitoredPorts)
+        {
+            var previous = crosspoints.FirstOrDefault(m => m.PortNumber == monitored.PortNumber);
+            var previousPorts = previous?.ConnectedPorts.Select(p => p.PortNumber).ToHashSet() ?? new HashSet<ushort>();
+            var newPorts = monitored.ConnectedPorts.Select(p => p.PortNumber).ToHashSet();
+
+            foreach (var added in newPorts.Except(previousPorts))
+            {
+                AddLogEntry($"Crosspoint made: port {monitored.PortNumber} <-> port {added}");
+            }
+            foreach (var removed in previousPorts.Except(newPorts))
+            {
+                AddLogEntry($"Crosspoint removed: port {monitored.PortNumber} <-> port {removed}");
+            }
+
+            if (previous != null)
+            {
+                crosspoints.Remove(previous);
+            }
+            crosspoints.Add(monitored);
+        }
+    }
+
+    private void HandleConferenceStatus(ReplyConferenceStatus status)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] HandleConferenceStatus: Conference {status.ConferenceNumber} has {status.Ports.Count} ports");
+
+        // Log all conferences regardless of port count
+        if (status.Ports.Count > 0)
+        {
+            AddLogEntry($"Conference {status.ConferenceNumber}: {status.Ports.Count} connected port(s) {string.Join(", ", status.Ports.Select(p => $"#{p.PortNumber}(L={p.IsListener},T={p.IsTalker})"))}");
+        }
+        else
+        {
+            AddLogEntry($"Conference {status.ConferenceNumber}: (no ports connected)");
+        }
+    }
+
+    private void HandleCardInfo(ReplyCardInfo cardInfo)
+    {
+        // The matrix answers a "get all" request with several replies: one large reply
+        // plus multiple per-slot replies. Merge by Rack/Slot instead of replacing so the
+        // table accumulates the full set rather than flickering to the last reply.
+        foreach (var card in cardInfo.Cards)
+        {
+            var existing = cards.FirstOrDefault(c => c.RackNumber == card.RackNumber && c.SlotNumber == card.SlotNumber);
+            if (existing != null)
+            {
+                cards.Remove(existing);
+            }
+            cards.Add(card);
+        }
+
+        cards = cards
+            .OrderBy(c => c.RackNumber)
+            .ThenBy(c => c.SlotNumber)
+            .ToList();
+
+        AddLogEntry($"Card Info: {cardInfo.Count} card(s) received");
+    }
+
+    private void HandleEntityInfo(ReplyEntityInfo entityInfo, bool hasMoreFragments)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] HandleEntityInfo called: RequestEntityType={entityInfo.RequestEntityType}, EntityCount={entityInfo.Entities.Count}, hasMoreFragments={hasMoreFragments}");
+
+        MergeEntities(conferenceEntities, entityInfo.Conferences);
+        MergeEntities(groupEntities, entityInfo.Groups);
+        MergeEntities(ifbEntities, entityInfo.Ifbs);
+
+        awaitingEntityFragments = hasMoreFragments;
+        System.Diagnostics.Debug.WriteLine($"[MatrixMonitor] Entities now: {conferenceEntities.Count} conferences, {groupEntities.Count} groups, {ifbEntities.Count} IFBs; awaitingMoreFragments={hasMoreFragments}");
+    }
+
+    private static void MergeEntities(List<EntityInfoEntry> target, IEnumerable<EntityInfoEntry> incoming)
+    {
+        foreach (var entry in incoming)
+        {
+            var existing = target.FirstOrDefault(c => c.Instance == entry.Instance);
+            if (existing != null)
+            {
+                target.Remove(existing);
+            }
+            target.Add(entry);
+        }
+    }
+
+    private void AddLogEntry(string message)
+    {
+        callbackLog.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+        while (callbackLog.Count > MaxLogEntries)
+        {
+            callbackLog.RemoveAt(0);
+        }
+    }
+
+    public void Dispose()
+    {
+        DiscoveryService.MatrixDiscovered -= OnMatrixDiscovered;
+        HCIService.ConnectionStateChanged -= OnConnectionStateChanged;
+        HCIService.MessageReceived -= OnMessageReceived;
+    }
+}

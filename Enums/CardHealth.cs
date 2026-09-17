@@ -56,6 +56,16 @@ public enum CardInfoType : byte
     MADI = 4,
 
     /// <summary>
+    /// E-DANTE card.
+    /// </summary>
+    Dante = 5,
+
+    /// <summary>
+    /// E-IPA card.
+    /// </summary>
+    IPA = 6,
+
+    /// <summary>
     /// Fibre card.
     /// </summary>
     Fiber = 26,

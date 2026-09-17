@@ -76,7 +76,7 @@ public class HCIRequest
     public virtual byte[] BuildMessage()
     {
         var payload = GeneratePayload();
-        
+
         // Calculate total length (including start marker, length bytes, and end marker)
         // Length = 2 (start marker) + 2 (length) + 2 (message ID) + 1 (flags) + payload + 2 (end marker)
         ushort length = (ushort)(2 + 2 + 2 + 1 + payload.Length + 2);

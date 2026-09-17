@@ -1,0 +1,46 @@
+using Microsoft.AspNetCore.Builder;
+using EclipseHXRecorder.Components;
+using EclipseHXRecorder.Services;
+using MudBlazor.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+builder.Services.AddMudServices();
+
+// Enable detailed circuit errors in development
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddServerSideBlazor()
+        .AddCircuitOptions(options => { options.DetailedErrors = true; });
+}
+
+// Add HCI service as a singleton
+builder.Services.AddSingleton<HCIService>();
+
+// Add discovery service as a singleton hosted service for matrix multicast/broadcast discovery
+builder.Services.AddSingleton<DiscoveryService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscoveryService>());
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseHttpsRedirection();
+
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+app.Run();

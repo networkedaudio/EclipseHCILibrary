@@ -25,6 +25,11 @@ public class RequestConferenceStatusRequest : HCIRequest
     public ushort ConferenceNumber { get; set; }
 
     /// <summary>
+    /// The flags byte for this request. Bit 3 (U flag) must be set for conference status requests.
+    /// </summary>
+    protected override byte FlagsByte => 0x08;
+
+    /// <summary>
     /// Creates a new Request Conference Status request.
     /// </summary>
     /// <param name="conferenceNumber">The conference number to query.</param>

@@ -29,6 +29,12 @@ public class RequestEntityInfoRequest : HCIRequest
     public EntityInfoType EntityType { get; set; }
 
     /// <summary>
+    /// The flags byte for this request. Per the HCI reference (section 4.73.6) the entity
+    /// info request uses flags 0x30 (S = start bit 0x10, N = always-set bit 0x20).
+    /// </summary>
+    protected override byte FlagsByte => 0x30;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="RequestEntityInfoRequest"/> class.
     /// </summary>
     public RequestEntityInfoRequest()
@@ -58,6 +64,9 @@ public class RequestEntityInfoRequest : HCIRequest
 
     /// <summary>
     /// Creates a request for conferences only.
+    /// WARNING: The matrix firmware only terminates its reply loop for an "All" request
+    /// (entity type 0). A single-type request hangs the matrix (watchdog reset). Prefer
+    /// <see cref="CreateForAll"/> and filter the reply client-side.
     /// </summary>
     /// <returns>A new RequestEntityInfoRequest configured for conferences.</returns>
     public static RequestEntityInfoRequest CreateForConferences()
@@ -67,6 +76,9 @@ public class RequestEntityInfoRequest : HCIRequest
 
     /// <summary>
     /// Creates a request for groups only.
+    /// WARNING: The matrix firmware only terminates its reply loop for an "All" request
+    /// (entity type 0). A single-type request hangs the matrix (watchdog reset). Prefer
+    /// <see cref="CreateForAll"/> and filter the reply client-side.
     /// </summary>
     /// <returns>A new RequestEntityInfoRequest configured for groups.</returns>
     public static RequestEntityInfoRequest CreateForGroups()
@@ -76,6 +88,9 @@ public class RequestEntityInfoRequest : HCIRequest
 
     /// <summary>
     /// Creates a request for IFBs only.
+    /// WARNING: The matrix firmware only terminates its reply loop for an "All" request
+    /// (entity type 0). A single-type request hangs the matrix (watchdog reset). Prefer
+    /// <see cref="CreateForAll"/> and filter the reply client-side.
     /// </summary>
     /// <returns>A new RequestEntityInfoRequest configured for IFBs.</returns>
     public static RequestEntityInfoRequest CreateForIfbs()

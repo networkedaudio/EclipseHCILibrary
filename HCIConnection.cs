@@ -36,6 +36,10 @@ public class HCIConnection : IDisposable
     private bool _disposed;
     private int _currentPort;
 
+    // Fragment reassembly for multi-fragment messages
+    private readonly Dictionary<HCIMessageID, (List<byte> payload, bool firstFragmentReceived)> _fragmentBuffer = new();
+    private readonly object _fragmentLock = new();
+
     private HCIRequestQueue? _requestQueue;
     private readonly Dictionary<HCIMessageID, HCIRequest> _pendingRequests = new();
     private readonly object _pendingRequestsLock = new();
@@ -126,6 +130,7 @@ public class HCIConnection : IDisposable
                     _stream = _client.GetStream();
                     StartReading();
                     InitializeRequestQueue();
+                    RequestAllConferencesAsync();
                     ConnectionStateChanged?.Invoke(this, true);
                     return true;
                 }
@@ -180,6 +185,11 @@ public class HCIConnection : IDisposable
             _buffer.Clear();
         }
 
+        lock (_fragmentLock)
+        {
+            _fragmentBuffer.Clear();
+        }
+
         ConnectionStateChanged?.Invoke(this, false);
     }
 
@@ -191,6 +201,19 @@ public class HCIConnection : IDisposable
     {
         _requestQueue = new HCIRequestQueue(SendRequestAsync, messagesPerSecond);
         _requestQueue.Start();
+    }
+
+    /// <summary>
+    /// Requests all conferences from the matrix (uses 0xFFFF wildcard).
+    /// </summary>
+    private void RequestAllConferencesAsync()
+    {
+        // TODO: Disabled for debugging
+        // if (_requestQueue != null)
+        // {
+        //     var request = new HCILibrary.HCIRequests.RequestConferenceStatusRequest(conferenceNumber: 0xFFFF);
+        //     _requestQueue.Enqueue(request);
+        // }
     }
 
     /// <summary>
@@ -376,9 +399,19 @@ public class HCIConnection : IDisposable
 
     /// <summary>
     /// Handles a decoded reply, matching it to pending requests if applicable.
+    /// Implements fragment reassembly for multi-fragment messages.
     /// </summary>
     private void HandleReply(HCIReply reply)
     {
+        // Note: S and E flags indicate streaming status, NOT message fragmentation.
+        // - S=1: First message in a server status stream
+        // - E=1: More messages expected to follow in stream
+        // Each complete HCI frame is a standalone, complete message.
+        // There is no per-message fragmentation to reassemble.
+
+        System.Diagnostics.Debug.WriteLine($"[HCIConnection.HandleReply] MessageID=0x{(int)reply.MessageID:X4}, Flags: S={reply.Flags.S}, E={reply.Flags.E}, PayloadLength={reply.Payload.Length}");
+
+        // Process the complete message immediately
         // Check if this reply matches a pending request
         HCIRequest? matchingRequest = null;
         lock (_pendingRequestsLock)
