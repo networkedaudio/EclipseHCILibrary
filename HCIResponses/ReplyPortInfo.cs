@@ -301,71 +301,92 @@ public class ReplyPortInfo
     private static PortInfo? ParsePortInfo(byte[] payload, ref int offset)
     {
         // Minimum per port: PortNumber(2) + PanelType(2) + OpStatus(1) + Firmware(8) + 
-        // KernelVer(4) + BootVer(4) + TalkListenLabel(20) + FSVer(4) + TalkLabel(20) +
-        // NumKeys(1) + AnswerBack(1) + NumExpPanels(1) + ExpStartRegion(1) = 69 bytes
-        if (payload.Length < offset + 69)
+        // BootVer(4) + KernelVer(4) + FSVer(4) + Reserved(4) + TalkListenLabel(20) + TalkLabel(20) + NumKeys(1) + AnswerBack(1) + NumExpPanels(1) + ExpPanelStartRegion(1) = 74 bytes
+        if (payload.Length < offset + 74)
         {
+            System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Insufficient data: need {offset + 74}, have {payload.Length}");
             return null;
         }
 
         var portInfo = new PortInfo();
+        int startOffset = offset;
 
-        // Port number: 16 bit word
+        // Port number: 16 bit word (big-endian)
         portInfo.PortNumber = (ushort)((payload[offset] << 8) | payload[offset + 1]);
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: PortNumber = 0x{portInfo.PortNumber:X4} (bytes: {payload[offset]:X2} {payload[offset + 1]:X2})");
         offset += 2;
 
-        // Panel type: 16 bit word
+        // Panel type: 16 bit word (big-endian)
         portInfo.RawPanelType = (ushort)((payload[offset] << 8) | payload[offset + 1]);
         portInfo.PanelType = Enum.IsDefined(typeof(PortPanelType), portInfo.RawPanelType)
             ? (PortPanelType)portInfo.RawPanelType
             : PortPanelType.Unknown;
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: PanelType = 0x{portInfo.RawPanelType:X4} (bytes: {payload[offset]:X2} {payload[offset + 1]:X2})");
         offset += 2;
 
         // Operational status: 1 byte
         portInfo.OperationalStatus = PanelOperationalStatus.Parse(payload[offset]);
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: OpStatus = {payload[offset]:X2}");
         offset += 1;
 
         // Panel firmware: 8 bytes string
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: PanelFirmware raw bytes: {BitConverter.ToString(payload, offset, 8)}");
         portInfo.PanelFirmware = ParseNullTerminatedString(payload, offset, 8);
         offset += 8;
 
-        // Kernel version: 4 bytes
-        portInfo.KernelVersion = VersionInfo.Parse(payload, offset);
-        offset += 4;
-
         // Boot version: 4 bytes
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: BootVersion raw bytes: {BitConverter.ToString(payload, offset, 4)}");
         portInfo.BootVersion = VersionInfo.Parse(payload, offset);
         offset += 4;
 
-        // Talk & Listen label: 10 words (20 bytes)
-        portInfo.TalkListenLabel = ParseNullTerminatedString(payload, offset, 20);
-        offset += 20;
+        // Kernel version: 4 bytes
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: KernelVersion raw bytes: {BitConverter.ToString(payload, offset, 4)}");
+        portInfo.KernelVersion = VersionInfo.Parse(payload, offset);
+        offset += 4;
 
         // FileSystem version: 4 bytes
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: FileSystemVersion raw bytes: {BitConverter.ToString(payload, offset, 4)}");
         portInfo.FileSystemVersion = VersionInfo.Parse(payload, offset);
         offset += 4;
 
-        // Talk label: 10 words (20 bytes)
+        // Reserved: 4 bytes (unused, reserved for future expansion)
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: Reserved raw bytes: {BitConverter.ToString(payload, offset, 4)}");
+        offset += 4;
+
+        // Talk & Listen label (talkAndListenLabel): 10 words (20 bytes)
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: TalkListenLabel raw bytes: {BitConverter.ToString(payload, offset, Math.Min(20, payload.Length - offset))}");
+        portInfo.TalkListenLabel = ParseNullTerminatedString(payload, offset, 20);
+        offset += 20;
+
+        // Talk & Listen alias (talkAndListenAlias): 10 words (20 bytes)
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: TalkLabel raw bytes: {BitConverter.ToString(payload, offset, Math.Min(20, payload.Length - offset))}");
         portInfo.TalkLabel = ParseNullTerminatedString(payload, offset, 20);
         offset += 20;
 
         // Number of keys: 1 byte
         portInfo.NumberOfKeys = payload[offset];
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: NumberOfKeys = {portInfo.NumberOfKeys} (byte: {payload[offset]:X2})");
         offset += 1;
 
         // Answer back timeout: 1 byte
         portInfo.AnswerBackTimeout = payload[offset];
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: AnswerBackTimeout = {portInfo.AnswerBackTimeout} (byte: {payload[offset]:X2})");
         offset += 1;
 
         // Number of expansion panels: 1 byte
         portInfo.NumberOfExpansionPanels = payload[offset];
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: NumberOfExpansionPanels = {portInfo.NumberOfExpansionPanels} (byte: {payload[offset]:X2})");
         offset += 1;
 
         // Expansion panel start region: 1 byte
         portInfo.ExpansionPanelStartRegion = payload[offset];
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Offset {offset}: ExpansionPanelStartRegion = {portInfo.ExpansionPanelStartRegion} (byte: {payload[offset]:X2})");
         offset += 1;
 
-        // Parse expansion panels
+        System.Diagnostics.Debug.WriteLine($"[ParsePortInfo] Finished port at startOffset={startOffset}, advanced {offset - startOffset} bytes. New offset={offset}");
+
+        // Parse expansion panels - read the actual NumberOfExpansionPanels count
+        System.Diagnostics.Debug.WriteLine($"[VERIFY] offset={offset}, NumberOfExpansionPanels={portInfo.NumberOfExpansionPanels}, ExpansionPanelStartRegion={portInfo.ExpansionPanelStartRegion}");
         for (int j = 0; j < portInfo.NumberOfExpansionPanels; j++)
         {
             var expPanel = ExpansionPanelInfo.Parse(payload, offset);
@@ -381,19 +402,63 @@ public class ReplyPortInfo
     }
 
     /// <summary>
-    /// Parses a null-terminated string from the payload.
+    /// Parses a null-terminated UTF-16 big-endian (wide-char) string from the payload.
     /// </summary>
-    private static string ParseNullTerminatedString(byte[] payload, int offset, int maxLength)
+    /// <param name="payload">The payload bytes.</param>
+    /// <param name="offset">The offset to start reading from.</param>
+    /// <param name="byteLength">The total field size in bytes (2 bytes per character).</param>
+    private static string ParseNullTerminatedString(byte[] payload, int offset, int byteLength)
     {
-        int length = 0;
-        for (int i = 0; i < maxLength && offset + i < payload.Length; i++)
+        try
         {
-            if (payload[offset + i] == 0)
+            int available = Math.Max(0, payload.Length - offset);
+            int count = Math.Min(byteLength, available);
+            // Dump the raw bytes for this field (limited to the provided byteLength)
+            string hex = count > 0 ? BitConverter.ToString(payload, offset, Math.Min(count, 32)) : "";
+            System.Diagnostics.Debug.WriteLine($"[ReplyPortInfo] ParseNullTerminatedString: offset={offset}, byteLength={byteLength}, available={available}, bytes={hex}...");
+
+            // Check if the field starts with a null terminator (0x00 0x00 in UTF-16BE)
+            // This indicates an empty string, not just the first character being empty
+            if (offset + 1 < payload.Length && payload[offset] == 0x00 && payload[offset + 1] == 0x00)
             {
-                break;
+                System.Diagnostics.Debug.WriteLine("[ReplyPortInfo] Parsed string: <empty> (null terminator at start)");
+                return string.Empty;
             }
-            length++;
+
+            int charCount = byteLength / 2;
+            int length = 0;
+            for (int i = 0; i < charCount; i++)
+            {
+                int charOffset = offset + (i * 2);
+                if (charOffset + 1 >= payload.Length)
+                {
+                    break;
+                }
+
+                ushort charValue = (ushort)((payload[charOffset] << 8) | payload[charOffset + 1]);
+                if (charValue == 0)
+                {
+                    break;
+                }
+                length++;
+            }
+
+            if (length > 0)
+            {
+                string result = System.Text.Encoding.BigEndianUnicode.GetString(payload, offset, length * 2);
+                System.Diagnostics.Debug.WriteLine($"[ReplyPortInfo] Parsed string (chars={length}): '{result}'");
+                return result;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[ReplyPortInfo] Parsed string: <empty>");
+                return string.Empty;
+            }
         }
-        return length > 0 ? System.Text.Encoding.ASCII.GetString(payload, offset, length) : string.Empty;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ReplyPortInfo] ParseNullTerminatedString exception: {ex}");
+            return string.Empty;
+        }
     }
 }

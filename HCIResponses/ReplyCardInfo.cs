@@ -1,4 +1,5 @@
 using HCILibrary.Enums;
+using System.Reflection.Metadata.Ecma335;
 
 namespace HCILibrary.HCIResponses;
 
@@ -35,27 +36,33 @@ public class CardInfo
     /// <summary>
     /// Rack number (starting from 1).
     /// </summary>
-    public byte RackNumber { get; set; }
+    public int RackNumber { get; set; }
 
     /// <summary>
     /// Slot number.
     /// </summary>
-    public byte SlotNumber { get; set; }
+    public int SlotNumber { get; set; }
 
+    public int AudioCardNumber
+    {
+        // CPU cards are P1 and P2 so audio cards numbering is off by 2
+        // But the frame is zero indexed
+        get => SlotNumber - 1;
+    }
     /// <summary>
     /// First port on card.
     /// </summary>
-    public ushort FirstPort { get; set; }
+    public int FirstPort { get; set; }
 
     /// <summary>
     /// Last port on card.
     /// </summary>
-    public ushort LastPort { get; set; }
+    public int LastPort { get; set; }
 
     /// <summary>
     /// Number of channels (typically number of ports).
     /// </summary>
-    public byte Channels { get; set; }
+    public int Channels { get; set; }
 
     /// <summary>
     /// DTMF board present (MVX card only).
@@ -88,7 +95,7 @@ public class ReplyCardInfo
     /// <summary>
     /// Number of card infos in this reply.
     /// </summary>
-    public byte Count { get; set; }
+    public int Count { get; set; }
 
     /// <summary>
     /// List of card info entries.
@@ -184,6 +191,7 @@ public class ReplyCardInfo
 
             // Slot number: 1 byte
             cardInfo.SlotNumber = payload[offset];
+            // CPU takes up first two slots, so the first audio card is slot 2.
             offset++;
 
             // First port: 2 bytes (big-endian)

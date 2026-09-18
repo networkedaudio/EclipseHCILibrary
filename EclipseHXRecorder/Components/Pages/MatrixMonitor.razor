@@ -260,8 +260,8 @@
     private List<EntityInfoEntry> ifbEntities = new();
     private bool awaitingEntityFragments;
     private List<CardInfo> cards = new();
-    private readonly Dictionary<ushort, List<PortInfo>> portsBySlot = new();
-    private readonly HashSet<ushort> expandedSlots = new();
+    private readonly Dictionary<int, List<PortInfo>> portsBySlot = new();
+    private readonly HashSet<int> expandedSlots = new();
     private readonly List<string> callbackLog = new();
     private const int MaxLogEntries = 100;
 
@@ -289,7 +289,7 @@
 
     private void RequestPortInfo(CardInfo card)
     {
-        HCIService.RequestPortInfo((ushort)(card.SlotNumber - 1));
+        HCIService.RequestPortInfo(card.SlotNumber);
     }
 
     private void ToggleCardPorts(CardInfo card)

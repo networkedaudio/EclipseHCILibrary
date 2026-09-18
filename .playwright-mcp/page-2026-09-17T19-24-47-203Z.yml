@@ -1,0 +1,262 @@
+- generic [ref=e30]:
+  - banner [ref=e31]:
+    - toolbar [ref=e32]:
+      - button [ref=e33] [cursor=pointer]:
+        - img [ref=e35]
+      - heading "EclipseHX Recorder" [level=5] [ref=e38]
+  - complementary [ref=e39]:
+    - navigation [ref=e41]:
+      - link "Home" [ref=e43] [cursor=pointer]:
+        - /url: /
+        - img [ref=e44]
+        - generic [ref=e47]: Home
+      - link "Matrix Monitor" [ref=e49] [cursor=pointer]:
+        - /url: /matrix-monitor
+        - img [ref=e50]
+        - generic [ref=e53]: Matrix Monitor
+  - generic [ref=e55]:
+    - heading "Matrix Monitor" [level=3] [ref=e58]
+    - heading "Discovered Matrices" [level=5] [ref=e59]
+    - paragraph [ref=e60]: Matrices detected via EclipseHX multicast/broadcast, or added manually below.
+    - table [ref=e63]:
+      - rowgroup [ref=e64]:
+        - row "IP Address Frame Name Identity Type Version Last Seen Actions" [ref=e65]:
+          - columnheader "IP Address" [ref=e66]
+          - columnheader "Frame Name" [ref=e67]
+          - columnheader "Identity" [ref=e68]
+          - columnheader "Type" [ref=e69]
+          - columnheader "Version" [ref=e70]
+          - columnheader "Last Seen" [ref=e71]
+          - columnheader "Actions" [ref=e72]
+      - rowgroup [ref=e73]:
+        - row "192.168.1.250 Office Delta New Configuration EclipseDelta 23.0.0.0 14:24:46 Connect" [ref=e443]:
+          - cell "192.168.1.250" [ref=e444]
+          - cell "Office Delta" [ref=e445]
+          - cell "New Configuration" [ref=e446]
+          - cell "EclipseDelta" [ref=e447]
+          - cell "23.0.0.0" [ref=e448]
+          - cell "14:24:46" [ref=e449]
+          - cell "Connect" [ref=e450]:
+            - button "Connect" [ref=e451] [cursor=pointer]:
+              - generic [ref=e452]: Connect
+    - generic [ref=e84]:
+      - heading "Add Matrix by IP" [level=6] [ref=e85]
+      - generic [ref=e86]:
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - textbox "IP Address" [ref=e91]:
+              - /placeholder: 192.168.1.100
+            - group "IP Address"
+          - generic: IP Address
+        - generic [ref=e92]:
+          - button "Add & Connect" [disabled]:
+            - generic: Add & Connect
+    - separator [ref=e93]
+    - generic [ref=e94]:
+      - heading "Connection" [level=5] [ref=e95]
+      - generic [ref=e98]: Connected to 192.168.1.250
+      - button "Disconnect" [ref=e99] [cursor=pointer]:
+        - generic [ref=e100]: Disconnect
+    - heading "Crosspoints" [level=5] [ref=e101]
+    - table [ref=e104]:
+      - rowgroup [ref=e105]:
+        - row "Monitored Port Connected Ports" [ref=e106]:
+          - columnheader "Monitored Port" [ref=e107]
+          - columnheader "Connected Ports" [ref=e108]
+      - rowgroup [ref=e109]:
+        - row "No crosspoint status received yet." [ref=e110]:
+          - columnheader "No crosspoint status received yet." [ref=e111]:
+            - paragraph [ref=e113]: No crosspoint status received yet.
+    - heading "Entities" [level=6] [ref=e114]
+    - button "Refresh" [ref=e115] [cursor=pointer]:
+      - generic [ref=e116]: Refresh
+    - paragraph [ref=e117]: Conferences (6)
+    - table [ref=e120]:
+      - rowgroup [ref=e121]:
+        - row "Conference Name" [ref=e122]:
+          - columnheader "Conference" [ref=e123]
+          - columnheader "Name" [ref=e124]
+      - rowgroup [ref=e125]:
+        - row "1 PL001" [ref=e193]:
+          - cell "1" [ref=e194]
+          - cell "PL001" [ref=e195]
+        - row "2 CONFERNCE" [ref=e196]:
+          - cell "2" [ref=e197]
+          - cell "CONFERNCE" [ref=e198]
+        - row "3 PL002" [ref=e199]:
+          - cell "3" [ref=e200]
+          - cell "PL002" [ref=e201]
+        - row "4 PL003" [ref=e202]:
+          - cell "4" [ref=e203]
+          - cell "PL003" [ref=e204]
+        - row "5 PL004" [ref=e205]:
+          - cell "5" [ref=e206]
+          - cell "PL004" [ref=e207]
+        - row "6 PL005" [ref=e208]:
+          - cell "6" [ref=e209]
+          - cell "PL005" [ref=e210]
+    - paragraph [ref=e130]: Groups (0)
+    - table [ref=e133]:
+      - rowgroup [ref=e134]:
+        - row "Group Name" [ref=e135]:
+          - columnheader "Group" [ref=e136]
+          - columnheader "Name" [ref=e137]
+      - rowgroup [ref=e138]:
+        - row "No group entities received yet." [ref=e139]:
+          - columnheader "No group entities received yet." [ref=e140]:
+            - paragraph [ref=e142]: No group entities received yet.
+    - paragraph [ref=e143]: IFBs (6)
+    - table [ref=e146]:
+      - rowgroup [ref=e147]:
+        - row "IFB Name" [ref=e148]:
+          - columnheader "IFB" [ref=e149]
+          - columnheader "Name" [ref=e150]
+      - rowgroup [ref=e151]:
+        - row "0 IFB001" [ref=e211]:
+          - cell "0" [ref=e212]
+          - cell "IFB001" [ref=e213]
+        - row "1 IFB002" [ref=e214]:
+          - cell "1" [ref=e215]
+          - cell "IFB002" [ref=e216]
+        - row "2 IFB003" [ref=e217]:
+          - cell "2" [ref=e218]
+          - cell "IFB003" [ref=e219]
+        - row "3 IFB004" [ref=e220]:
+          - cell "3" [ref=e221]
+          - cell "IFB004" [ref=e222]
+        - row "4 IFB005" [ref=e223]:
+          - cell "4" [ref=e224]
+          - cell "IFB005" [ref=e225]
+        - row "5 IFB006" [ref=e226]:
+          - cell "5" [ref=e227]
+          - cell "IFB006" [ref=e228]
+    - heading "Cards" [level=6] [ref=e156]
+    - button "Refresh" [ref=e157] [cursor=pointer]:
+      - generic [ref=e158]: Refresh
+    - table [ref=e161]:
+      - rowgroup [ref=e162]:
+        - row "Rack Slot Current Type Expected Type Health Ports Channels App Version Boot Version FPGA Version" [ref=e163]:
+          - columnheader [ref=e164]
+          - columnheader "Rack" [ref=e165]
+          - columnheader "Slot" [ref=e166]
+          - columnheader "Current Type" [ref=e167]
+          - columnheader "Expected Type" [ref=e168]
+          - columnheader "Health" [ref=e169]
+          - columnheader "Ports" [ref=e170]
+          - columnheader "Channels" [ref=e171]
+          - columnheader "App Version" [ref=e172]
+          - columnheader "Boot Version" [ref=e173]
+          - columnheader "FPGA Version" [ref=e174]
+      - rowgroup [ref=e175]:
+        - 'row "1 1 CPUMaster CPUMaster Good 0 - 0 0 Rack FY36.36.2.0 [Oct 15 2025 18:30:14] CPU48 2.4.22.0 (BOOT) [Sep 06 2012] U53: 0.2.27.0, U1: 0.4.21.0" [ref=e239]':
+          - cell [ref=e240]:
+            - button [ref=e241] [cursor=pointer]:
+              - img [ref=e243]
+          - cell "1" [ref=e246]
+          - cell "1" [ref=e247]
+          - cell "CPUMaster" [ref=e248]
+          - cell "CPUMaster" [ref=e249]
+          - cell "Good" [ref=e250]
+          - cell "0 - 0" [ref=e251]
+          - cell "0" [ref=e252]
+          - cell "Rack FY36.36.2.0 [Oct 15 2025 18:30:14]" [ref=e253]
+          - cell "CPU48 2.4.22.0 (BOOT) [Sep 06 2012]" [ref=e254]
+          - 'cell "U53: 0.2.27.0, U1: 0.4.21.0" [ref=e255]'
+        - row "1 3 MVX MVX Good 0 - 15 16 HDLC 710425 2.12.7.0 [Aug 27 2014 16:39:05] BOOT MVX 2.12.6.0 [Aug 27 2014 16:38:39] FPGA Version 1.2.18.0" [ref=e256]:
+          - cell [ref=e257]:
+            - button [ref=e258] [cursor=pointer]:
+              - img [ref=e260]
+          - cell "1" [ref=e263]
+          - cell "3" [ref=e264]
+          - cell "MVX" [ref=e265]
+          - cell "MVX" [ref=e266]
+          - cell "Good" [ref=e267]
+          - cell "0 - 15" [ref=e268]
+          - cell "16" [ref=e269]
+          - cell "HDLC 710425 2.12.7.0 [Aug 27 2014 16:39:05]" [ref=e270]
+          - cell "BOOT MVX 2.12.6.0 [Aug 27 2014 16:38:39]" [ref=e271]
+          - cell "FPGA Version 1.2.18.0" [ref=e272]
+        - row "Port Info - Rack 1, Slot 3 Port Panel Type Status Label Firmware Keys Exp. Panels No port info received yet for this slot." [ref=e331]:
+          - cell "Port Info - Rack 1, Slot 3 Port Panel Type Status Label Firmware Keys Exp. Panels No port info received yet for this slot." [ref=e332]:
+            - paragraph [ref=e333]: Port Info - Rack 1, Slot 3
+            - table [ref=e336]:
+              - rowgroup [ref=e337]:
+                - row "Port Panel Type Status Label Firmware Keys Exp. Panels" [ref=e338]:
+                  - columnheader "Port" [ref=e339]
+                  - columnheader "Panel Type" [ref=e340]
+                  - columnheader "Status" [ref=e341]
+                  - columnheader "Label" [ref=e342]
+                  - columnheader "Firmware" [ref=e343]
+                  - columnheader "Keys" [ref=e344]
+                  - columnheader "Exp. Panels" [ref=e345]
+              - rowgroup [ref=e346]:
+                - row "No port info received yet for this slot." [ref=e347]:
+                  - columnheader "No port info received yet for this slot." [ref=e348]:
+                    - paragraph [ref=e350]: No port info received yet for this slot.
+        - row "1 4 IPA IPA Good 16 - 63 48 10.100.63.0 - 3;M+ 2.0.65.08 19.31.64.0 (v.2.0.10-j635_Clearcom)" [ref=e273]:
+          - cell [ref=e274]:
+            - button [ref=e275] [cursor=pointer]:
+              - img [ref=e277]
+          - cell "1" [ref=e280]
+          - cell "4" [ref=e281]
+          - cell "IPA" [ref=e282]
+          - cell "IPA" [ref=e283]
+          - cell "Good" [ref=e284]
+          - cell "16 - 63" [ref=e285]
+          - cell "48" [ref=e286]
+          - cell "10.100.63.0 - 3;M+" [ref=e287]
+          - cell "2.0.65.08" [ref=e288]
+          - cell "19.31.64.0 (v.2.0.10-j635_Clearcom)" [ref=e289]
+        - row "1 6 Dante Dante Good 64 - 127 64 APP DANTE 1.11.58.0 [Nov 4 2025 13:03:51] BOOT DANTE 1.6.57.0 [Sep 20 2022 12:29:20] FPGA E-DANTE 1.4.59.0 MK-I" [ref=e290]:
+          - cell [ref=e291]:
+            - button [active] [ref=e292] [cursor=pointer]:
+              - img [ref=e294]
+          - cell "1" [ref=e297]
+          - cell "6" [ref=e298]
+          - cell "Dante" [ref=e299]
+          - cell "Dante" [ref=e300]
+          - cell "Good" [ref=e301]
+          - cell "64 - 127" [ref=e302]
+          - cell "64" [ref=e303]
+          - cell "APP DANTE 1.11.58.0 [Nov 4 2025 13:03:51]" [ref=e304]
+          - cell "BOOT DANTE 1.6.57.0 [Sep 20 2022 12:29:20]" [ref=e305]
+          - cell "FPGA E-DANTE 1.4.59.0 MK-I" [ref=e306]
+        - row "Port Info - Rack 1, Slot 6 Port Panel Type Status Label Firmware Keys Exp. Panels No port info received yet for this slot." [ref=e455]:
+          - cell "Port Info - Rack 1, Slot 6 Port Panel Type Status Label Firmware Keys Exp. Panels No port info received yet for this slot." [ref=e456]:
+            - paragraph [ref=e457]: Port Info - Rack 1, Slot 6
+            - table [ref=e460]:
+              - rowgroup [ref=e461]:
+                - row "Port Panel Type Status Label Firmware Keys Exp. Panels" [ref=e462]:
+                  - columnheader "Port" [ref=e463]
+                  - columnheader "Panel Type" [ref=e464]
+                  - columnheader "Status" [ref=e465]
+                  - columnheader "Label" [ref=e466]
+                  - columnheader "Firmware" [ref=e467]
+                  - columnheader "Keys" [ref=e468]
+                  - columnheader "Exp. Panels" [ref=e469]
+              - rowgroup [ref=e470]:
+                - row "No port info received yet for this slot." [ref=e471]:
+                  - columnheader "No port info received yet for this slot." [ref=e472]:
+                    - paragraph [ref=e474]: No port info received yet for this slot.
+    - heading "Live Callback Log" [level=5] [ref=e180]
+    - generic [ref=e181]:
+      - paragraph [ref=e307]: "[14:23:04] Port Info: slot 14, 0 port(s) received"
+      - paragraph [ref=e308]: "[14:23:04] Port Info: slot 12, 6 port(s) received"
+      - paragraph [ref=e309]: "[14:23:04] Port Info: slot 10, 0 port(s) received"
+      - paragraph [ref=e310]: "[14:23:04] Port Info: slot 8, 0 port(s) received"
+      - paragraph [ref=e311]: "[14:23:04] Port Info: slot 6, 0 port(s) received"
+      - paragraph [ref=e312]: "[14:23:04] Port Info: slot 4, 0 port(s) received"
+      - paragraph [ref=e313]: "[14:23:04] Port Info: slot 2, 7 port(s) received"
+      - paragraph [ref=e314]: "[14:23:04] Port Info: slot 2, 7 port(s) received"
+      - paragraph [ref=e315]: "[14:23:01] Card Info: 1 card(s) received"
+      - paragraph [ref=e316]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e317]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e318]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e351]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e352]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e353]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e354]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e355]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e356]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e357]: "[14:23:01] Card Info: 3 card(s) received"
+      - paragraph [ref=e358]: "[14:23:01] Card Info: 34 card(s) received"

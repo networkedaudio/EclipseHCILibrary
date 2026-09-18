@@ -24,13 +24,13 @@ public class RequestPortInfoRequest : HCIRequest
     /// <summary>
     /// Gets or sets the card slot number.
     /// </summary>
-    public byte SlotNumber { get; set; }
+    public int SlotNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the port offset within the card (0-based).
     /// An offset of 0 requests information for all ports on the card.
     /// </summary>
-    public byte PortOffset { get; set; }
+    public int PortOffset { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestPortInfoRequest"/> class.
@@ -45,10 +45,10 @@ public class RequestPortInfoRequest : HCIRequest
     /// with specified slot number. The port offset defaults to 0 (all ports on the card).
     /// </summary>
     /// <param name="slotNumber">The card slot number.</param>
-    public RequestPortInfoRequest(ushort slotNumber)
+    public RequestPortInfoRequest(int slotNumber)
         : base(HCIMessageID.RequestPortInfo)
     {
-        SlotNumber = (byte)slotNumber;
+        SlotNumber = slotNumber;
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class RequestPortInfoRequest : HCIRequest
     /// </summary>
     /// <param name="slotNumber">The card slot number.</param>
     /// <param name="portOffset">The port offset within the card (0-based). Use 0 for all ports.</param>
-    public RequestPortInfoRequest(byte slotNumber, byte portOffset)
+    public RequestPortInfoRequest(int slotNumber, int portOffset)
         : base(HCIMessageID.RequestPortInfo)
     {
         SlotNumber = slotNumber;

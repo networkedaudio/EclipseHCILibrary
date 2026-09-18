@@ -1,0 +1,57 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - toolbar [ref=e4]:
+      - button [ref=e5] [cursor=pointer]:
+        - img [ref=e7]
+      - heading "EclipseHX Recorder" [level=5] [ref=e10]
+  - complementary [ref=e11]:
+    - navigation [ref=e13]:
+      - link "Home" [ref=e15] [cursor=pointer]:
+        - /url: /
+        - img [ref=e16]
+        - generic [ref=e19]: Home
+      - link "Matrix Monitor" [ref=e21] [cursor=pointer]:
+        - /url: /matrix-monitor
+        - img [ref=e22]
+        - generic [ref=e25]: Matrix Monitor
+  - generic [ref=e27]:
+    - heading "Matrix Monitor" [level=3] [ref=e28]
+    - heading "Discovered Matrices" [level=5] [ref=e29]
+    - paragraph [ref=e30]: Matrices detected via EclipseHX multicast/broadcast, or added manually below.
+    - table [ref=e33]:
+      - rowgroup [ref=e34]:
+        - row "IP Address Frame Name Identity Type Version Last Seen Actions" [ref=e35]:
+          - columnheader "IP Address" [ref=e36]
+          - columnheader "Frame Name" [ref=e37]
+          - columnheader "Identity" [ref=e38]
+          - columnheader "Type" [ref=e39]
+          - columnheader "Version" [ref=e40]
+          - columnheader "Last Seen" [ref=e41]
+          - columnheader "Actions" [ref=e42]
+      - rowgroup [ref=e43]:
+        - row "192.168.1.250 Office Delta New Configuration EclipseDelta 23.0.0.0 19:07:19 Connect" [ref=e44]:
+          - cell "192.168.1.250" [ref=e45]
+          - cell "Office Delta" [ref=e46]
+          - cell "New Configuration" [ref=e47]
+          - cell "EclipseDelta" [ref=e48]
+          - cell "23.0.0.0" [ref=e49]
+          - cell "19:07:19" [ref=e50]
+          - cell "Connect" [ref=e51]:
+            - button "Connect" [ref=e52] [cursor=pointer]:
+              - generic [ref=e53]: Connect
+    - generic [ref=e54]:
+      - heading "Add Matrix by IP" [level=6] [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - textbox "IP Address" [ref=e61]:
+              - /placeholder: 192.168.1.100
+            - group "IP Address"
+          - generic: IP Address
+        - generic [ref=e62]:
+          - button "Add & Connect" [disabled]:
+            - generic: Add & Connect
+    - separator [ref=e63]
+    - generic [ref=e64]:
+      - heading "Connection" [level=5] [ref=e65]
+      - generic [ref=e68]: Not connected

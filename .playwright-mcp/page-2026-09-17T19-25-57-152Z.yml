@@ -1,0 +1,125 @@
+- generic [ref=e30]:
+  - banner [ref=e31]:
+    - toolbar [ref=e32]:
+      - button [ref=e33] [cursor=pointer]:
+        - img [ref=e35]
+      - heading "EclipseHX Recorder" [level=5] [ref=e38]
+  - complementary [ref=e39]:
+    - navigation [ref=e41]:
+      - link "Home" [ref=e43] [cursor=pointer]:
+        - /url: /
+        - img [ref=e44]
+        - generic [ref=e47]: Home
+      - link "Matrix Monitor" [active] [ref=e49] [cursor=pointer]:
+        - /url: /matrix-monitor
+        - img [ref=e50]
+        - generic [ref=e53]: Matrix Monitor
+  - generic [ref=e55]:
+    - heading "Matrix Monitor" [level=3] [ref=e58]
+    - heading "Discovered Matrices" [level=5] [ref=e59]
+    - paragraph [ref=e60]: Matrices detected via EclipseHX multicast/broadcast, or added manually below.
+    - table [ref=e63]:
+      - rowgroup [ref=e64]:
+        - row "IP Address Frame Name Identity Type Version Last Seen Actions" [ref=e65]:
+          - columnheader "IP Address" [ref=e66]
+          - columnheader "Frame Name" [ref=e67]
+          - columnheader "Identity" [ref=e68]
+          - columnheader "Type" [ref=e69]
+          - columnheader "Version" [ref=e70]
+          - columnheader "Last Seen" [ref=e71]
+          - columnheader "Actions" [ref=e72]
+      - rowgroup [ref=e73]:
+        - row "192.168.1.250 Office Delta New Configuration EclipseDelta 23.0.0.0 14:25:56 Connect" [ref=e74]:
+          - cell "192.168.1.250" [ref=e75]
+          - cell "Office Delta" [ref=e76]
+          - cell "New Configuration" [ref=e77]
+          - cell "EclipseDelta" [ref=e78]
+          - cell "23.0.0.0" [ref=e79]
+          - cell "14:25:56" [ref=e80]
+          - cell "Connect" [ref=e81]:
+            - button "Connect" [ref=e82] [cursor=pointer]:
+              - generic [ref=e83]: Connect
+    - generic [ref=e84]:
+      - heading "Add Matrix by IP" [level=6] [ref=e85]
+      - generic [ref=e86]:
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - textbox "IP Address" [ref=e91]:
+              - /placeholder: 192.168.1.100
+            - group "IP Address"
+          - generic: IP Address
+        - generic [ref=e92]:
+          - button "Add & Connect" [disabled]:
+            - generic: Add & Connect
+    - separator [ref=e93]
+    - generic [ref=e94]:
+      - heading "Connection" [level=5] [ref=e95]
+      - generic [ref=e98]: Connected to
+      - button "Disconnect" [ref=e99] [cursor=pointer]:
+        - generic [ref=e100]: Disconnect
+    - heading "Crosspoints" [level=5] [ref=e101]
+    - table [ref=e104]:
+      - rowgroup [ref=e105]:
+        - row "Monitored Port Connected Ports" [ref=e106]:
+          - columnheader "Monitored Port" [ref=e107]
+          - columnheader "Connected Ports" [ref=e108]
+      - rowgroup [ref=e109]:
+        - row "No crosspoint status received yet." [ref=e110]:
+          - columnheader "No crosspoint status received yet." [ref=e111]:
+            - paragraph [ref=e113]: No crosspoint status received yet.
+    - heading "Entities" [level=6] [ref=e114]
+    - button "Refresh" [ref=e115] [cursor=pointer]:
+      - generic [ref=e116]: Refresh
+    - paragraph [ref=e117]: Conferences (0)
+    - table [ref=e120]:
+      - rowgroup [ref=e121]:
+        - row "Conference Name" [ref=e122]:
+          - columnheader "Conference" [ref=e123]
+          - columnheader "Name" [ref=e124]
+      - rowgroup [ref=e125]:
+        - row "No conference entities received yet." [ref=e126]:
+          - columnheader "No conference entities received yet." [ref=e127]:
+            - paragraph [ref=e129]: No conference entities received yet.
+    - paragraph [ref=e130]: Groups (0)
+    - table [ref=e133]:
+      - rowgroup [ref=e134]:
+        - row "Group Name" [ref=e135]:
+          - columnheader "Group" [ref=e136]
+          - columnheader "Name" [ref=e137]
+      - rowgroup [ref=e138]:
+        - row "No group entities received yet." [ref=e139]:
+          - columnheader "No group entities received yet." [ref=e140]:
+            - paragraph [ref=e142]: No group entities received yet.
+    - paragraph [ref=e143]: IFBs (0)
+    - table [ref=e146]:
+      - rowgroup [ref=e147]:
+        - row "IFB Name" [ref=e148]:
+          - columnheader "IFB" [ref=e149]
+          - columnheader "Name" [ref=e150]
+      - rowgroup [ref=e151]:
+        - row "No IFB entities received yet." [ref=e152]:
+          - columnheader "No IFB entities received yet." [ref=e153]:
+            - paragraph [ref=e155]: No IFB entities received yet.
+    - heading "Cards" [level=6] [ref=e156]
+    - button "Refresh" [ref=e157] [cursor=pointer]:
+      - generic [ref=e158]: Refresh
+    - table [ref=e161]:
+      - rowgroup [ref=e162]:
+        - row "Rack Slot Current Type Expected Type Health Ports Channels App Version Boot Version FPGA Version" [ref=e163]:
+          - columnheader [ref=e164]
+          - columnheader "Rack" [ref=e165]
+          - columnheader "Slot" [ref=e166]
+          - columnheader "Current Type" [ref=e167]
+          - columnheader "Expected Type" [ref=e168]
+          - columnheader "Health" [ref=e169]
+          - columnheader "Ports" [ref=e170]
+          - columnheader "Channels" [ref=e171]
+          - columnheader "App Version" [ref=e172]
+          - columnheader "Boot Version" [ref=e173]
+          - columnheader "FPGA Version" [ref=e174]
+      - rowgroup [ref=e175]:
+        - row "No card info received yet." [ref=e176]:
+          - columnheader "No card info received yet." [ref=e177]:
+            - paragraph [ref=e179]: No card info received yet.
+    - heading "Live Callback Log" [level=5] [ref=e180]
+    - paragraph [ref=e182]: Waiting for crosspoint / conference events...

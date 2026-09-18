@@ -15,6 +15,12 @@ public static class HCIResponse
     private static readonly byte[] HCIv2Marker = { 0xAB, 0xBA, 0xCE, 0xDE };
 
     /// <summary>
+    /// Buffers for streaming/fragmented messages. Key is MessageID, value is accumulated payload bytes.
+    /// Used to assemble multi-fragment ReplyPortInfo and similar streaming messages.
+    /// </summary>
+    private static readonly Dictionary<HCIMessageID, List<byte>> FragmentBuffer = new();
+
+    /// <summary>
     /// Decodes a complete HCI message into an HCIReply object.
     /// </summary>
     /// <param name="message">The complete message including start and end markers.</param>
@@ -605,11 +611,75 @@ public static class HCIResponse
 
     /// <summary>
     /// Decodes a Reply Port Info message (Message ID 0x00B8) payload.
+    /// Handles fragmented/streaming messages using HCI S (Start) and E (More fragments) flags.
     /// </summary>
     /// <param name="reply">The reply containing the port info payload.</param>
     private static void DecodeReplyPortInfo(HCIReply reply)
     {
-        reply.PortInfo = ReplyPortInfo.Parse(reply.Payload);
+        // Debug: Log incoming fragment details
+        System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo_Fragment] MessageID=0x{(int)(ushort)reply.MessageID:04X}, Flags: S={reply.Flags.S}, E={reply.Flags.E}, PayloadLength={reply.Payload.Length}");
+
+        // If this is the start of a new sequence (S=True), clear any existing buffer
+        if (reply.Flags.S)
+        {
+            if (FragmentBuffer.ContainsKey(reply.MessageID))
+            {
+                System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Discarding incomplete buffered message for ID 0x{(int)(ushort)reply.MessageID:04X}");
+                FragmentBuffer.Remove(reply.MessageID);
+            }
+
+            // Initialize new fragment buffer for this message
+            FragmentBuffer[reply.MessageID] = new List<byte>(reply.Payload);
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Started new sequence for Message ID 0x{(int)(ushort)reply.MessageID:04X}, initial fragment length: {reply.Payload.Length}");
+        }
+        else
+        {
+            // This is a continuation fragment; append to buffer
+            if (!FragmentBuffer.ContainsKey(reply.MessageID))
+            {
+                System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] WARNING: Received continuation fragment (S=False) but no buffer exists for Message ID 0x{(int)(ushort)reply.MessageID:04X}. Starting new buffer.");
+                FragmentBuffer[reply.MessageID] = new List<byte>();
+            }
+
+            FragmentBuffer[reply.MessageID].AddRange(reply.Payload);
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Appended continuation fragment to buffer for Message ID 0x{(int)(ushort)reply.MessageID:04X}, buffer now {FragmentBuffer[reply.MessageID].Count} bytes");
+        }
+
+        // If this is the last fragment (E=False), assemble and parse the complete payload
+        if (!reply.Flags.E)
+        {
+            byte[] completePayload = FragmentBuffer[reply.MessageID].ToArray();
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Sequence complete (E=False). Total assembled payload: {completePayload.Length} bytes");
+
+            // Debug: dump assembled payload for inspection
+            if (completePayload.Length > 0)
+            {
+                int dumpLen = Math.Min(100, completePayload.Length);
+                string hex = BitConverter.ToString(completePayload, 0, dumpLen);
+                System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Assembled payload [{completePayload.Length} bytes], first {dumpLen} bytes: {hex}");
+
+                // Parse the header: SlotNumber(2) + NumberPorts(1)
+                if (completePayload.Length >= 3)
+                {
+                    ushort slotNumber = (ushort)((completePayload[0] << 8) | completePayload[1]);
+                    byte numPorts = completePayload[2];
+                    System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Slot={slotNumber}, NumPorts={numPorts}");
+                }
+            }
+
+            // Parse the complete assembled payload
+            reply.PortInfo = ReplyPortInfo.Parse(completePayload);
+
+            // Clean up buffer
+            FragmentBuffer.Remove(reply.MessageID);
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Parsing complete for Message ID 0x{(int)(ushort)reply.MessageID:04X}. Buffer cleared.");
+        }
+        else
+        {
+            // More fragments expected; set PortInfo to null for now
+            reply.PortInfo = null;
+            System.Diagnostics.Debug.WriteLine($"[HCIResponse.DecodeReplyPortInfo] Waiting for more fragments (E=True).");
+        }
     }
 
     /// <summary>

@@ -76,7 +76,7 @@ public class HCIService : IAsyncDisposable
     /// </summary>
     /// <param name="slotNumber">The card slot number to query.</param>
     /// <param name="portOffset">The port offset within the card (0-based). Use 0 to request all ports on the card.</param>
-    public void RequestPortInfo(ushort slotNumber, byte portOffset = 0)
+    public void RequestPortInfo(int slotNumber, int portOffset = 0)
     {
         System.Diagnostics.Debug.WriteLine($"[HCIService.RequestPortInfo] Sending RequestPortInfoRequest for slot {slotNumber}, port offset {portOffset}");
         SendRequest(new RequestPortInfoRequest((byte)slotNumber, portOffset));
